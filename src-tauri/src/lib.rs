@@ -31,7 +31,6 @@ pub fn run() {
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
-                let _ = window.navigate("http://tauri.localhost/".parse().unwrap());
             } else {
                 eprintln!("[PRISTINE] Error: Could not find main window!");
             }

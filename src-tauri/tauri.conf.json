@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "identifier": "com.superzonico.pristine",
   "build": {
+    "beforeDevCommand": "node server.js",
+    "devUrl": "http://localhost:1420",
     "frontendDist": "../ui"
   },
   "app": {
