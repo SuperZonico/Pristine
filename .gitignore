@@ -55,3 +55,7 @@ $RECYCLE.BIN/
 /scratch/
 *.log
 *.tmp
+
+# Internal architectural and project documentation (private/local only)
+/docs/
+

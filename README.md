@@ -31,21 +31,25 @@ Every modification is transparent, granular, and backed by an atomic transaction
 
 ---
 
-## Master Documentation Suite
+## Core Capabilities & Pillars
 
-Comprehensive architecture, research, and threat modeling documents are located in the [`docs/`](docs/) directory:
+### 1. Privacy & Telemetry Suppression
+- **Deterministic Group Policy Directives**: Enforces `HKLM\SOFTWARE\Policies\Microsoft\Windows` policies across DiagTrack (Universal Telemetry Client), CEIP, Windows Error Reporting (WER), Advertising ID, and Windows Copilot/Recall.
+- **DNS Sinkhole Shield**: Instantaneous redirection of over 40 known diagnostic and telemetry hostnames to `0.0.0.0` within `C:\Windows\System32\drivers\etc\hosts`, combined with automatic DNS resolver cache flushing (`DnsFlushResolverCache`).
 
-| Document | Description |
-| :--- | :--- |
-| **[01. Vision & Philosophy](docs/01_VISION_Y_FILOSOFIA.md)** | "Never Break Windows" principles, consent-first architecture, and risk classification. |
-| **[02. Technical Architecture](docs/02_ARQUITECTURA_TECNICA.md)** | Dual-process privilege model, Cargo workspace crates, and memory safety invariants. |
-| **[03. Telemetry & Services Catalog](docs/03_CATALOGO_TELEMETRIA_Y_SERVICIOS.md)** | Detailed mapping of DiagTrack, Recall, Copilot, CEIP, WER, and Edge telemetry. |
-| **[04. Cleanup & Optimization Engine](docs/04_OPTIMIZACIONES_Y_LIMPIEZA.md)** | Safe temp cleaner, WinSxS DISM pruning, and multimedia network latency mitigations. |
-| **[05. Security, Rollback & Resilience](docs/05_SEGURIDAD_ROLLBACK_Y_RESILIENCIA.md)** | Transactional diff journal, VSS restore points, and emergency recovery script. |
-| **[06. Design System & UX](docs/06_SISTEMA_DE_DISENO_Y_UX.md)** | Windows 11 Fluent/Mica visual specs, dark/light dynamic tokens, and UI layout. |
-| **[07. Phase Plan & Testing Roadmap](docs/07_PLAN_DE_FASE_Y_ROADMAP.md)** | Sprints, verification matrix across Windows 11 22H2/23H2/24H2 builds. |
-| **[08. Code Standards & GitHub Prep](docs/08_ESTANDARES_CODIGO_Y_GITHUB.md)** | File headers, author attribution, and vector iconography standards. |
-| **[10. Software & Bloatware Uninstaller](docs/10_DESINSTALADOR_DE_SOFTWARE_Y_BLOATWARE.md)** | Win32 & UWP uninstaller, deep residual cleaner, and DNS telemetry sinkhole. |
+### 2. Deterministic Rollback Journal
+- **Cryptographic Checksums**: Every applied tweak is preceded by a state snapshot saved into a transaction journal, signed with SHA-256 integrity hashes.
+- **1-Click Atomic Restoration**: Easily revert any session or restore system state to the exact baseline prior to modification.
+- **VSS Integration**: Create Volume Shadow Copy (VSS) restore points natively via Windows API before running major optimizations.
+
+### 3. Clean Software & Bloatware Uninstaller
+- **Win32 & Modern UWP Support**: Intelligently discovers desktop software and Windows 11 AppX/MSIX packages.
+- **Zero-Residual Scanning**: Deep scanning across `AppData\Local`, `AppData\Roaming`, `ProgramData`, and registry paths (`HKCU`, `HKLM`) with strict whole-word token matching and TLD stripping to eliminate false positives.
+
+### 4. Smart Non-Destructive Cleaning
+- **Safe Temporary Files**: Purgers files strictly older than 24 hours without active file locks, protecting running processes.
+- **WinSxS Component Store Pruning**: Automated DISM component store cleanup to reclaim space occupied by superseded Windows updates.
+- **Large & Stale Files Analyzer**: Scans user directories for heavy, cold files (>100MB, >1GB) unused for months, offering safe movement to the Windows Recycle Bin (`SHFileOperationW` with `FOF_ALLOWUNDO`).
 
 ---
 
@@ -53,16 +57,15 @@ Comprehensive architecture, research, and threat modeling documents are located 
 
 ```
 Pristine/
-├── .github/workflows/          # Automated GitHub Actions CI pipeline
+├── .github/workflows/          # Automated GitHub Actions CI/CD pipelines
 ├── crates/
 │   ├── pristine-core/          # Domain models, tweak catalog, and SHA-256 transactions
-│   ├── pristine-winapi/        # Safe Win32 RAII wrappers (Registry, SCM, Restore)
+│   ├── pristine-winapi/        # Safe Win32 RAII wrappers (Registry, SCM, Restore, Shell)
 │   ├── pristine-engine/        # System auditor, transaction planner, and rollback
 │   ├── pristine-metrics/       # Real-time PDH / Win32 CPU & RAM hardware metrics
 │   └── pristine-ipc/           # Typed inter-process protocol and SDDL access control
 ├── src-tauri/                  # Tauri v2 desktop shell and native command bindings
 ├── ui/                         # Handcrafted Mica/Acrylic interface (HTML, CSS, JS)
-├── docs/                       # Technical architecture and research book
 ├── LICENSE                     # MIT License
 └── SECURITY.md                 # Vulnerability disclosure policy
 ```
