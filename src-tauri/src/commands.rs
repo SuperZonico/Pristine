@@ -280,10 +280,27 @@ pub fn get_installed_apps() -> Vec<pristine_winapi::InstalledApp> {
 }
 
 #[tauri::command]
-pub fn uninstall_app(app_id: String, is_uwp: bool, uninstall_cmd: String) -> OperationResult {
+pub fn uninstall_app(
+    app_id: Option<String>,
+    id: Option<String>,
+    is_uwp: Option<bool>,
+    uninstall_cmd: Option<String>,
+) -> OperationResult {
+    let target_id = match app_id.or(id) {
+        Some(s) if !s.trim().is_empty() => s,
+        _ => {
+            return OperationResult {
+                success: false,
+                message: "No se especificó un identificador de aplicación válido.".to_string(),
+            };
+        }
+    };
+    let target_is_uwp = is_uwp.unwrap_or(false);
+    let target_cmd = uninstall_cmd.unwrap_or_default();
+
     #[cfg(target_os = "windows")]
     {
-        match pristine_winapi::uninstall_application(&app_id, is_uwp, &uninstall_cmd) {
+        match pristine_winapi::uninstall_application(&target_id, target_is_uwp, &target_cmd) {
             Ok(msg) => OperationResult {
                 success: true,
                 message: msg,
@@ -298,7 +315,10 @@ pub fn uninstall_app(app_id: String, is_uwp: bool, uninstall_cmd: String) -> Ope
     {
         OperationResult {
             success: true,
-            message: "Simulación de desinstalación en entorno no Windows.".to_string(),
+            message: format!(
+                "Simulación de desinstalación de '{}' en entorno no Windows.",
+                target_id
+            ),
         }
     }
 }

@@ -660,149 +660,7 @@
     }
   }
 
-  // ============================================================================
-  // Software Uninstaller & Bloatware Remover Logic
-  // ============================================================================
-  async function loadInstalledApps() {
-    const listEl = document.getElementById('apps-list');
-    if (!listEl) return;
 
-    try {
-      const apps = await invokeNative('get_installed_apps');
-      if (Array.isArray(apps)) {
-        state.apps = apps;
-
-        // Update count badges
-        const countAll = document.getElementById('count-all-apps');
-        const countBloat = document.getElementById('count-bloatware-apps');
-        const countUser = document.getElementById('count-user-apps');
-        const countSystem = document.getElementById('count-system-apps');
-
-        if (countAll) countAll.textContent = apps.length;
-        if (countBloat) countBloat.textContent = apps.filter(a => a.category === 'bloatware').length;
-        if (countUser) countUser.textContent = apps.filter(a => a.category === 'user').length;
-        if (countSystem) countSystem.textContent = apps.filter(a => a.category === 'system').length;
-
-        renderApps();
-      }
-    } catch (err) {
-      console.error('Error loading installed apps:', err);
-      listEl.innerHTML = `
-        <div style="font-size: 13px; color: var(--accent-rose); padding: 24px 0; text-align: center;">
-          Error al obtener inventario de programas: ${err}
-        </div>
-      `;
-    }
-  }
-
-  function renderApps() {
-    const listEl = document.getElementById('apps-list');
-    if (!listEl) return;
-
-    listEl.innerHTML = '';
-
-    const filter = state.selectedAppFilter;
-    const query = state.appSearchQuery.toLowerCase().trim();
-
-    const filtered = state.apps.filter(app => {
-      const matchesFilter = filter === 'all' || app.category === filter;
-      const matchesQuery =
-        !query ||
-        app.name.toLowerCase().includes(query) ||
-        app.publisher.toLowerCase().includes(query) ||
-        app.id.toLowerCase().includes(query);
-      return matchesFilter && matchesQuery;
-    });
-
-    if (filtered.length === 0) {
-      listEl.innerHTML = `
-        <div style="font-size: 13px; color: var(--text-muted); padding: 30px 0; text-align: center;">
-          No se encontraron aplicaciones que coincidan con los criterios de búsqueda.
-        </div>
-      `;
-      return;
-    }
-
-    filtered.forEach(app => {
-      const card = document.createElement('div');
-      card.className = 'app-card';
-
-      const badgeClass = app.category === 'bloatware' ? 'bloatware' : app.category === 'system' ? 'system' : 'user';
-      const badgeText = app.category === 'bloatware' ? 'Bloatware' : app.category === 'system' ? 'Sistema' : 'Usuario';
-      const isSystem = app.category === 'system';
-
-      const sizeStr = app.estimated_size_mb > 0 ? `${app.estimated_size_mb} MB` : (app.is_uwp ? 'UWP App' : 'Tamaño N/D');
-
-      card.innerHTML = `
-        <div class="app-info">
-          <div class="app-name-row">
-            <span class="app-name">${app.name}</span>
-            <span class="app-badge ${badgeClass}">${badgeText}</span>
-          </div>
-          <div class="app-meta">
-            <span>${app.publisher}</span>
-            <span>&bull;</span>
-            <span>v${app.version}</span>
-            <span>&bull;</span>
-            <span>${sizeStr}</span>
-          </div>
-        </div>
-        <div>
-          ${
-            isSystem
-              ? `<button class="btn btn-secondary btn-uninstall" disabled title="Componente protegido del sistema">Protegido</button>`
-              : `<button class="btn btn-uninstall btn-danger btn-uninstall-action" data-id="${app.id}">
-                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  <span>Desinstalar</span>
-                </button>`
-          }
-        </div>
-      `;
-
-      const btnUninstall = card.querySelector('.btn-uninstall-action');
-      if (btnUninstall) {
-        btnUninstall.addEventListener('click', () => {
-          if (!state.isElevated) {
-            promptElevation('Desinstalar aplicaciones del sistema requiere permisos de Administrador.<br><br>¿Deseas reiniciar Pristine como Administrador?');
-            return;
-          }
-
-          showModal({
-            title: `¿Desinstalar ${app.name}?`,
-            message: `Estás a punto de desinstalar <strong>${app.name}</strong> (${app.version}) de <em>${app.publisher}</em>.<br><br>¿Deseas proceder con la eliminación segura?`,
-            type: app.category === 'bloatware' ? 'info' : 'warning',
-            confirmText: 'Desinstalar Ahora',
-            cancelText: 'Cancelar',
-            onConfirm: async () => {
-              try {
-                const res = await invokeNative('uninstall_app', {
-                  appId: app.id,
-                  isUwp: app.is_uwp,
-                  uninstallCmd: app.uninstall_cmd
-                });
-
-                showModal({
-                  title: res.success ? 'Desinstalación Finalizada' : 'Aviso',
-                  message: res.message || 'Proceso completado.',
-                  type: res.success ? 'info' : 'warning'
-                });
-
-                await loadInstalledApps();
-              } catch (err) {
-                showModal({
-                  title: 'Error al Desinstalar',
-                  message: 'Fallo al desinstalar la aplicación: ' + err,
-                  type: 'error'
-                });
-              }
-            }
-          });
-        });
-      }
-
-      listEl.appendChild(card);
-    });
-  }
 
   // ============================================================================
   // Hosts Telemetry Shield Status
@@ -1278,7 +1136,7 @@
           });
 
           await invokeNative('uninstall_app', {
-            id: app.id,
+            appId: app.id,
             isUwp: app.is_uwp,
             uninstallCmd: app.uninstall_cmd
           });
