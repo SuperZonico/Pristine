@@ -30,6 +30,8 @@ pub fn run() {
             request_elevation,
             get_installed_apps,
             uninstall_app,
+            scan_app_residuals,
+            clean_app_residuals,
             flush_dns,
             get_hosts_shield_status,
             toggle_hosts_shield,

@@ -391,3 +391,49 @@ pub fn restart_windows_explorer() -> OperationResult {
         }
     }
 }
+
+#[tauri::command]
+pub fn scan_app_residuals(
+    app_name: String,
+    publisher: String,
+) -> pristine_winapi::ResidualScanResult {
+    #[cfg(target_os = "windows")]
+    {
+        pristine_winapi::scan_app_residuals(&app_name, &publisher)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        pristine_winapi::ResidualScanResult {
+            app_name,
+            residuals: Vec::new(),
+            total_size_bytes: 0,
+        }
+    }
+}
+
+#[tauri::command]
+pub fn clean_app_residuals(paths: Vec<String>) -> OperationResult {
+    #[cfg(target_os = "windows")]
+    {
+        match pristine_winapi::clean_residuals(&paths) {
+            Ok(count) => OperationResult {
+                success: true,
+                message: format!("Se eliminaron exitosamente {} elementos residuales.", count),
+            },
+            Err(e) => OperationResult {
+                success: false,
+                message: e.to_string(),
+            },
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        OperationResult {
+            success: true,
+            message: format!(
+                "Se simularon la eliminación de {} elementos residuales.",
+                paths.len()
+            ),
+        }
+    }
+}

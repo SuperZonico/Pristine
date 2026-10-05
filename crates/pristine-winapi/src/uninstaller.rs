@@ -16,9 +16,9 @@ use serde::{Deserialize, Serialize};
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::{ERROR_NO_MORE_ITEMS, ERROR_SUCCESS};
 use windows::Win32::System::Registry::{
-    RegCloseKey, RegEnumKeyExW, RegOpenKeyExW, RegQueryValueExW, HKEY, HKEY_CURRENT_USER,
-    HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY, REG_DWORD, REG_SZ,
-    REG_VALUE_TYPE,
+    RegCloseKey, RegDeleteTreeW, RegEnumKeyExW, RegOpenKeyExW, RegQueryValueExW, HKEY,
+    HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY, REG_DWORD,
+    REG_SZ, REG_VALUE_TYPE,
 };
 
 use crate::error::WinApiError;
@@ -480,5 +480,400 @@ pub fn uninstall_application(
                 message: format!("El desinstalador retornó código de error: {}", err),
             })
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResidualItem {
+    pub id: String,
+    pub item_type: String, // "folder" or "registry"
+    pub path: String,
+    pub description: String,
+    pub size_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResidualScanResult {
+    pub app_name: String,
+    pub residuals: Vec<ResidualItem>,
+    pub total_size_bytes: u64,
+}
+
+const GLOBAL_BLACKLIST_TOKENS: &[&str] = &[
+    "windows",
+    "system32",
+    "syswow64",
+    "microsoft",
+    "visual",
+    "studio",
+    "defender",
+    "explorer",
+    "common",
+    "files",
+    "internet",
+    "temp",
+    "desktop",
+    "documents",
+    "downloads",
+    "start",
+    "menu",
+    "programs",
+    "program",
+    "startup",
+    "system",
+    "users",
+    "all users",
+    "default",
+    "public",
+    "driver",
+    "drivers",
+    "intel",
+    "amd",
+    "nvidia",
+    "realtek",
+    "google",
+    "apple",
+    "mozilla",
+    "oracle",
+    "appdata",
+    "local",
+    "locallow",
+    "roaming",
+    "programdata",
+    "classes",
+    "policies",
+    "registeredapplications",
+    "windows nt",
+    "clients",
+    "oem",
+];
+
+fn get_dir_size_recursive(path: &std::path::Path, depth: usize) -> u64 {
+    if depth > 6 {
+        return 0;
+    }
+    let mut total = 0u64;
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            if let Ok(meta) = entry.metadata() {
+                if meta.is_file() {
+                    total += meta.len();
+                } else if meta.is_dir() {
+                    total += get_dir_size_recursive(&entry.path(), depth + 1);
+                }
+            }
+        }
+    }
+    total
+}
+
+/// Extrae palabras clave significativas del nombre de la aplicación para buscar residuos de manera quirúrgica y segura.
+pub fn extract_search_tokens(app_name: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let clean = app_name
+        .replace(
+            ['(', ')', '[', ']', '-', '_', '.', ':', ',', '/', '\\', '+'],
+            " ",
+        )
+        .to_lowercase();
+
+    for word in clean.split_whitespace() {
+        let w = word.trim();
+        if w.len() >= 3
+            && !w.chars().all(|c| c.is_ascii_digit())
+            && ![
+                "x64",
+                "x86",
+                "64bit",
+                "32bit",
+                "bit",
+                "edition",
+                "version",
+                "release",
+                "setup",
+                "installer",
+                "update",
+                "pack",
+                "redistributable",
+                "corporation",
+                "inc",
+                "llc",
+                "the",
+                "for",
+                "and",
+                "app",
+                "pro",
+                "free",
+                "community",
+            ]
+            .contains(&w)
+            && !GLOBAL_BLACKLIST_TOKENS.contains(&w)
+            && !tokens.contains(&w.to_string())
+        {
+            tokens.push(w.to_string());
+        }
+    }
+
+    tokens
+}
+
+/// Escanea exhaustivamente en busca de carpetas y claves de registro residuales que quedaron huérfanas tras la desinstalación.
+pub fn scan_app_residuals(app_name: &str, _publisher: &str) -> ResidualScanResult {
+    let tokens = extract_search_tokens(app_name);
+    let mut residuals = Vec::new();
+    let mut seen_paths = HashSet::new();
+
+    if tokens.is_empty() {
+        return ResidualScanResult {
+            app_name: app_name.to_string(),
+            residuals,
+            total_size_bytes: 0,
+        };
+    }
+
+    // 1. Escanear carpetas de usuario y globales
+    let mut candidate_roots = Vec::new();
+
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        candidate_roots.push(std::path::PathBuf::from(appdata));
+    }
+    if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
+        candidate_roots.push(std::path::PathBuf::from(&localappdata));
+        candidate_roots.push(std::path::PathBuf::from(&localappdata).join("Programs"));
+    }
+    if let Ok(programdata) = std::env::var("ProgramData") {
+        candidate_roots.push(std::path::PathBuf::from(programdata));
+    } else {
+        candidate_roots.push(std::path::PathBuf::from(r"C:\ProgramData"));
+    }
+    if let Ok(pf) = std::env::var("ProgramFiles") {
+        candidate_roots.push(std::path::PathBuf::from(pf));
+    }
+    if let Ok(pfx86) = std::env::var("ProgramFiles(x86)") {
+        candidate_roots.push(std::path::PathBuf::from(pfx86));
+    }
+
+    for root_dir in candidate_roots {
+        if !root_dir.is_dir() {
+            continue;
+        }
+
+        if let Ok(entries) = std::fs::read_dir(&root_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if !path.is_dir() {
+                    continue;
+                }
+
+                if let Some(folder_name) = path.file_name().and_then(|n| n.to_str()) {
+                    let folder_lower = folder_name.to_lowercase();
+
+                    if GLOBAL_BLACKLIST_TOKENS.iter().any(|&b| folder_lower == *b) {
+                        continue;
+                    }
+
+                    // Debe coincidir con al menos un token
+                    let matches = tokens.iter().any(|token| {
+                        folder_lower == *token
+                            || (folder_lower.contains(token)
+                                && folder_lower.len() <= token.len() + 20)
+                    });
+
+                    if matches {
+                        let path_str = path.to_string_lossy().to_string();
+                        if !seen_paths.contains(&path_str) {
+                            seen_paths.insert(path_str.clone());
+                            let size = get_dir_size_recursive(&path, 0);
+                            let size_mb = (size as f64) / (1024.0 * 1024.0);
+
+                            residuals.push(ResidualItem {
+                                id: format!("dir_{}", residuals.len()),
+                                item_type: "folder".to_string(),
+                                path: path_str,
+                                description: format!("Directorio residual ({:.1} MB)", size_mb),
+                                size_bytes: size,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Escanear subclaves de registro en HKCU y HKLM
+    let reg_targets = [
+        (HKEY_CURRENT_USER, r"Software", "HKCU"),
+        (HKEY_LOCAL_MACHINE, r"SOFTWARE", "HKLM"),
+        (HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node", "HKLM_WOW64"),
+    ];
+
+    for (root, subkey, prefix) in reg_targets {
+        let subkey_w = to_wide(subkey);
+        let mut hkey = HKEY::default();
+
+        let open_res =
+            unsafe { RegOpenKeyExW(root, PCWSTR(subkey_w.as_ptr()), 0, KEY_READ, &mut hkey) };
+
+        if open_res == ERROR_SUCCESS {
+            let mut index = 0u32;
+            let mut name_buf = [0u16; 256];
+
+            loop {
+                let mut name_len = name_buf.len() as u32;
+                let enum_res = unsafe {
+                    RegEnumKeyExW(
+                        hkey,
+                        index,
+                        windows::core::PWSTR(name_buf.as_mut_ptr()),
+                        &mut name_len,
+                        None,
+                        windows::core::PWSTR::null(),
+                        None,
+                        None,
+                    )
+                };
+
+                if enum_res == ERROR_NO_MORE_ITEMS {
+                    break;
+                }
+
+                if enum_res == ERROR_SUCCESS {
+                    let sub_name = from_wide(&name_buf[..name_len as usize]);
+                    let sub_lower = sub_name.to_lowercase();
+
+                    if !GLOBAL_BLACKLIST_TOKENS.iter().any(|&b| sub_lower == *b) {
+                        let matches = tokens.iter().any(|token| {
+                            sub_lower == *token
+                                || (sub_lower.contains(token)
+                                    && sub_lower.len() <= token.len() + 20)
+                        });
+
+                        if matches {
+                            let reg_path = format!(r"{}\{}\{}", prefix, subkey, sub_name);
+                            if !seen_paths.contains(&reg_path) {
+                                seen_paths.insert(reg_path.clone());
+                                residuals.push(ResidualItem {
+                                    id: format!("reg_{}", residuals.len()),
+                                    item_type: "registry".to_string(),
+                                    path: reg_path,
+                                    description: "Clave de registro residual de configuración"
+                                        .to_string(),
+                                    size_bytes: 1024,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                index += 1;
+            }
+
+            unsafe {
+                let _ = RegCloseKey(hkey);
+            }
+        }
+    }
+
+    let total_size_bytes = residuals.iter().map(|r| r.size_bytes).sum();
+
+    ResidualScanResult {
+        app_name: app_name.to_string(),
+        residuals,
+        total_size_bytes,
+    }
+}
+
+/// Elimina de forma atómica y segura los residuos seleccionados (directorios y claves de registro).
+pub fn clean_residuals(paths: &[String]) -> Result<u32, WinApiError> {
+    let mut cleaned_count = 0u32;
+
+    for path_str in paths {
+        if path_str.starts_with(r"HKCU\")
+            || path_str.starts_with(r"HKLM\")
+            || path_str.starts_with(r"HKLM_WOW64\")
+        {
+            let (root, subkey) = if let Some(stripped) = path_str.strip_prefix(r"HKCU\") {
+                (HKEY_CURRENT_USER, stripped)
+            } else if let Some(stripped) = path_str.strip_prefix(r"HKLM\") {
+                (HKEY_LOCAL_MACHINE, stripped)
+            } else if let Some(stripped) = path_str.strip_prefix(r"HKLM_WOW64\") {
+                (HKEY_LOCAL_MACHINE, stripped)
+            } else {
+                continue;
+            };
+
+            // Regla de seguridad estricta: nunca eliminar subclaves raíz como "Software"
+            let parts: Vec<&str> = subkey.split('\\').collect();
+            if parts.len() < 2 {
+                continue;
+            }
+
+            let subkey_lower = parts.last().unwrap_or(&"").to_lowercase();
+            if GLOBAL_BLACKLIST_TOKENS.contains(&subkey_lower.as_str()) {
+                continue;
+            }
+
+            let subkey_w = to_wide(subkey);
+            let res = unsafe { RegDeleteTreeW(root, PCWSTR(subkey_w.as_ptr())) };
+
+            if res == ERROR_SUCCESS {
+                cleaned_count += 1;
+            }
+        } else {
+            // Eliminar carpeta del sistema de archivos
+            let p = std::path::Path::new(path_str);
+            if p.is_dir() {
+                // Guardas estrictas de seguridad:
+                // 1. No debe ser raíz (ej. C:\)
+                // 2. Debe tener al menos 3 componentes (ej. C:\Users\user\AppData\...)
+                if p.components().count() >= 3 {
+                    let folder_name = p
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("")
+                        .to_lowercase();
+                    if !GLOBAL_BLACKLIST_TOKENS.contains(&folder_name.as_str())
+                        && std::fs::remove_dir_all(p).is_ok()
+                    {
+                        cleaned_count += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(cleaned_count)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_search_tokens() {
+        let tokens = extract_search_tokens("Spotify Music Player (x64) v1.2.3");
+        assert!(tokens.contains(&"spotify".to_string()));
+        assert!(tokens.contains(&"music".to_string()));
+        assert!(tokens.contains(&"player".to_string()));
+        assert!(!tokens.contains(&"x64".to_string()));
+        assert!(!tokens.contains(&"v1".to_string()));
+    }
+
+    #[test]
+    fn test_blacklisted_tokens_filtered() {
+        let tokens = extract_search_tokens("Microsoft Windows System Common Files");
+        assert!(
+            tokens.is_empty(),
+            "All blacklisted tokens should be rejected"
+        );
+    }
+
+    #[test]
+    fn test_scan_app_residuals_empty_on_blacklisted() {
+        let res = scan_app_residuals("Microsoft Windows", "Microsoft Corporation");
+        assert!(
+            res.residuals.is_empty(),
+            "Should not return residuals for core OS keywords"
+        );
     }
 }

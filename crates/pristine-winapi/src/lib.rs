@@ -24,7 +24,10 @@ pub use registry::{delete_registry_value, read_registry_value, write_registry_va
 pub use security::{is_process_elevated, relaunch_elevated};
 pub use services::{configure_service, query_service, ServiceStatusInfo};
 pub use tasks::{configure_task, query_task_enabled};
-pub use uninstaller::{get_installed_apps, uninstall_application, InstalledApp};
+pub use uninstaller::{
+    clean_residuals, get_installed_apps, scan_app_residuals, uninstall_application, InstalledApp,
+    ResidualItem, ResidualScanResult,
+};
 
 #[cfg(test)]
 mod tests {

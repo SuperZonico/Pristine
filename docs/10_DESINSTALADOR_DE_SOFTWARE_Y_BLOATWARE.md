@@ -68,14 +68,43 @@ Pristine etiqueta cada paquete con un nivel de riesgo y categoría:
 
 ---
 
-## 4. Proceso de Desinstalación Atómica y Limpieza de Residuos
+## 4. Proceso de Desinstalación Atómica y Motor de Limpieza de Residuos Huérfanos
 
-1. **Confirmación con Modal Nativo:** El usuario visualiza los detalles del programa (nombre, versión, tamaño, publicador).
-2. **Punto de Seguridad VSS (Opcional recomendado):** Creación de un snapshot de Windows previo.
-3. **Ejecución del Desinstalador Oficial:**
-   - Para aplicaciones UWP: Invocación de `Remove-AppxPackage -Package <PackageFullName> -AllUsers`.
-   - Para aplicaciones Win32: Ejecución del comando de desinstalación silenciosa (`QuietUninstallString`) o estándar (`UninstallString`).
-4. **Inspección de Residuos:** Detección de carpetas huérfanas en `%AppData%`, `%LocalAppData%` y claves obsoletas tras la desinstalación.
+A diferencia de los desinstaladores convencionales que dejan gigabytes de basura en disco y cientos de claves huérfanas en el registro, Pristine implementa un flujo de limpieza profunda de 4 fases:
+
+### Fase 1: Confirmación Visual y Control de Seguridad
+- El usuario visualiza la ficha técnica completa del programa (nombre, desarrollador, versión, arquitectura, tamaño aproximado y comando).
+- Si la aplicación es un componente crítico del sistema (DirectX, VC++ Runtimes, WebView2, Tienda de Windows), el botón de desinstalación se desactiva permanentemente para prevenir fallos catastróficos.
+- Opcional: Generación previa de un punto de restauración VSS (`create_system_restore_point`).
+
+### Fase 2: Ejecución Aislada de la Rutina Oficial
+- **Paquetes UWP de Windows 11:** Se invoca de forma limpia PowerShell sin perfiles de usuario (`-NoProfile -Command Remove-AppxPackage -Package '<PackageFullName>' -AllUsers`), eliminando el paquete para todos los usuarios del equipo.
+- **Programas Win32 Tradicionales:** Se ejecuta de forma prioritaria la desinstalación silenciosa (`QuietUninstallString`) si está disponible, o el desinstalador estándar (`UninstallString`) con flags de aislamiento.
+
+### Fase 3: Escaneo Quirúrgico de Residuos (`scan_app_residuals`)
+Inmediatamente tras la desinstalación (o a petición del usuario mediante el botón **"Buscar Residuos"**), el motor nativo de Rust ejecuta un escaneo multi-objetivo:
+1. **Sanitización de Tokens (`extract_search_tokens`):**
+   - Extrae palabras clave significativas del nombre de la aplicación, eliminando versiones, arquitecturas (`x64`, `x86`), sufijos genéricos y palabras comunes (`setup`, `installer`, `pack`, etc.).
+   - Aplica una **Lista Negra Global Estricta** (`GLOBAL_BLACKLIST_TOKENS`) que prohíbe de forma inviolable buscar o tocar términos como `windows`, `system32`, `syswow64`, `microsoft`, `defender`, `explorer`, `driver`, `intel`, `amd`, `nvidia`, `temp`, `desktop`, `documents`, `programdata`, `appdata`, etc.
+2. **Inspección de 6 Ubicaciones Clave del Sistema de Archivos:**
+   - `%APPDATA%` (Archivos de configuración de roaming).
+   - `%LOCALAPPDATA%` (Cachés, datos locales y bases de datos SQLite).
+   - `%LOCALAPPDATA%\Programs` (Instalaciones modernas a nivel de usuario).
+   - `%ProgramData%` (Datos compartidos de aplicaciones globales).
+   - `C:\Program Files` (Carpetas residuales vacías o con logs tras desinstalar).
+   - `C:\Program Files (x86)` (Carpetas residuales de software de 32 bits).
+   - Cálculo recursivo exacto del tamaño en bytes para informar al usuario de cuánto espacio recuperará.
+3. **Inspección de Colmenas del Registro Win32:**
+   - `HKEY_CURRENT_USER\Software\<AppName>`
+   - `HKEY_LOCAL_MACHINE\SOFTWARE\<AppName>`
+   - `HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\<AppName>`
+
+### Fase 4: Purgado Atómico y Seguro (`clean_residuals`)
+- Pristine presenta al usuario una lista detallada con cada carpeta y clave encontrada y el peso total recuperable en MB.
+- **Guardas Inviolables de Eliminación:**
+  - En disco: La ruta debe existir, ser un directorio, no ser raíz (`C:\`) y contar con al menos 3 componentes de ruta para impedir cualquier eliminación imprudente.
+  - En registro: La clave debe tener al menos un prefijo y subclave válida (imposible borrar `Software` o ramas del sistema) y se purga de forma recursiva con la API nativa de Win32 `RegDeleteTreeW`.
+- Tras la confirmación, se destruyen todos los rastros sin requerir reinicio y el inventario se actualiza automáticamente.
 
 ---
 

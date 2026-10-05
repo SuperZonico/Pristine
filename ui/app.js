@@ -256,6 +256,36 @@
       return { success: true, message: 'Aplicación desinstalada exitosamente.' };
     }
 
+    if (cmd === 'scan_app_residuals') {
+      return {
+        app_name: args.appName || 'Aplicación',
+        residuals: [
+          {
+            id: 'mock_dir_1',
+            item_type: 'folder',
+            path: 'C:\\Users\\Usuario\\AppData\\Local\\' + (args.appName || 'App'),
+            description: 'Directorio residual (42.5 MB)',
+            size_bytes: 44564480
+          },
+          {
+            id: 'mock_reg_1',
+            item_type: 'registry',
+            path: 'HKCU\\Software\\' + (args.appName || 'App'),
+            description: 'Clave de registro residual de configuración',
+            size_bytes: 1024
+          }
+        ],
+        total_size_bytes: 44565504
+      };
+    }
+
+    if (cmd === 'clean_app_residuals') {
+      return {
+        success: true,
+        message: `Se eliminaron exitosamente ${(args.paths || []).length} elementos residuales.`
+      };
+    }
+
     return null;
   }
 
@@ -1086,6 +1116,280 @@
         renderApps();
       });
     });
+  }
+
+  // ============================================================================
+  // Software Uninstaller & Residuals Cleaning Engine
+  // ============================================================================
+  async function loadInstalledApps() {
+    const elAppsList = document.getElementById('apps-list');
+    if (!elAppsList) return;
+
+    elAppsList.innerHTML = `
+      <div style="font-size: 13px; color: var(--text-muted); padding: 40px 0; text-align: center;">
+        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none" stroke-width="2" style="animation: spin 1.5s linear infinite; margin-bottom: 12px; display: inline-block;">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg><br>
+        Escaneando registro Win32 y paquetes UWP instalados...
+      </div>
+    `;
+
+    try {
+      const apps = await invokeNative('get_installed_apps');
+      state.apps = Array.isArray(apps) ? apps : [];
+      updateAppsCounters();
+      renderApps();
+    } catch (err) {
+      console.error('Failed to load installed apps:', err);
+      elAppsList.innerHTML = `
+        <div style="font-size: 13px; color: var(--accent-rose); padding: 30px 0; text-align: center;">
+          Error al obtener inventario de programas: ${escapeHtml(String(err))}
+        </div>
+      `;
+    }
+  }
+
+  function updateAppsCounters() {
+    const elAll = document.getElementById('count-all-apps');
+    const elBloat = document.getElementById('count-bloatware-apps');
+    const elUser = document.getElementById('count-user-apps');
+    const elSystem = document.getElementById('count-system-apps');
+
+    if (elAll) elAll.textContent = state.apps.length;
+    if (elBloat) elBloat.textContent = state.apps.filter(a => a.category === 'bloatware').length;
+    if (elUser) elUser.textContent = state.apps.filter(a => a.category === 'user').length;
+    if (elSystem) elSystem.textContent = state.apps.filter(a => a.category === 'system').length;
+  }
+
+  function renderApps() {
+    const elAppsList = document.getElementById('apps-list');
+    if (!elAppsList) return;
+
+    let filtered = state.apps;
+
+    // Filter by tab category
+    if (state.selectedAppFilter !== 'all') {
+      filtered = filtered.filter(a => a.category === state.selectedAppFilter);
+    }
+
+    // Filter by search query
+    if (state.appSearchQuery.trim()) {
+      const q = state.appSearchQuery.toLowerCase();
+      filtered = filtered.filter(a =>
+        a.name.toLowerCase().includes(q) ||
+        (a.publisher && a.publisher.toLowerCase().includes(q))
+      );
+    }
+
+    if (filtered.length === 0) {
+      elAppsList.innerHTML = `
+        <div style="font-size: 13px; color: var(--text-muted); padding: 40px 0; text-align: center;">
+          No se encontraron aplicaciones que coincidan con el criterio seleccionado.
+        </div>
+      `;
+      return;
+    }
+
+    elAppsList.innerHTML = '';
+    filtered.forEach(app => {
+      const card = document.createElement('div');
+      card.className = 'app-card';
+
+      // Badge label
+      let badgeHtml = '';
+      if (app.category === 'bloatware') {
+        badgeHtml = `<span class="app-badge bloatware">Bloatware Sugerido</span>`;
+      } else if (app.category === 'user') {
+        badgeHtml = `<span class="app-badge user">Usuario</span>`;
+      } else {
+        badgeHtml = `<span class="app-badge system">Sistema Protegido</span>`;
+      }
+
+      const sizeStr = app.estimated_size_mb > 0 ? `${app.estimated_size_mb} MB` : 'UWP';
+      const typeStr = app.is_uwp ? 'Paquete UWP' : 'Win32';
+
+      card.innerHTML = `
+        <div class="app-info">
+          <div class="app-name-row">
+            <span class="app-name">${escapeHtml(app.name)}</span>
+            ${badgeHtml}
+          </div>
+          <div class="app-meta">
+            <span><strong>Desarrollador:</strong> ${escapeHtml(app.publisher || 'Desconocido')}</span>
+            <span><strong>Versión:</strong> ${escapeHtml(app.version || '1.0')}</span>
+            <span><strong>Tipo:</strong> ${typeStr}</span>
+            <span><strong>Tamaño:</strong> ${sizeStr}</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          ${
+            app.is_system_component || app.category === 'system'
+              ? `<button class="btn btn-secondary btn-uninstall" disabled title="Componente protegido del sistema para evitar inestabilidad.">
+                  <svg viewBox="0 0 24 24" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span>Protegido</span>
+                </button>`
+              : `
+                <button class="btn btn-secondary btn-uninstall btn-scan-residuals" title="Buscar carpetas en AppData y claves de registro huérfanas">
+                  <svg viewBox="0 0 24 24" width="14" height="14"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <span>Buscar Residuos</span>
+                </button>
+                <button class="btn btn-uninstall btn-danger btn-do-uninstall" title="Desinstalar aplicación mediante su rutina oficial">
+                  <svg viewBox="0 0 24 24" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <span>Desinstalar</span>
+                </button>
+              `
+          }
+        </div>
+      `;
+
+      const btnUninstall = card.querySelector('.btn-do-uninstall');
+      if (btnUninstall) {
+        btnUninstall.addEventListener('click', () => promptUninstallApp(app));
+      }
+
+      const btnResiduals = card.querySelector('.btn-scan-residuals');
+      if (btnResiduals) {
+        btnResiduals.addEventListener('click', () => scanAndCleanResiduals(app.name, app.publisher));
+      }
+
+      elAppsList.appendChild(card);
+    });
+  }
+
+  function promptUninstallApp(app) {
+    showModal({
+      title: `¿Desinstalar ${app.name}?`,
+      message: `
+        ¿Estás seguro de que deseas desinstalar esta aplicación?<br><br>
+        <strong>Desarrollador:</strong> ${escapeHtml(app.publisher)}<br>
+        <strong>Versión:</strong> ${escapeHtml(app.version)}<br>
+        <strong>Tipo:</strong> ${app.is_uwp ? 'Paquete UWP Moderno (Windows 11)' : 'Software Win32 Tradicional'}<br><br>
+        <em>Pristine ejecutará el proceso de desinstalación de forma aislada y te ofrecerá una limpieza profunda de archivos y claves residuales al finalizar.</em>
+      `,
+      type: 'warning',
+      confirmText: 'Desinstalar Ahora',
+      cancelText: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          showModal({
+            title: 'Desinstalando...',
+            message: `Ejecutando rutina de desinstalación para <strong>${escapeHtml(app.name)}</strong>. Por favor espera...`,
+            type: 'info'
+          });
+
+          await invokeNative('uninstall_app', {
+            id: app.id,
+            isUwp: app.is_uwp,
+            uninstallCmd: app.uninstall_cmd
+          });
+
+          // Offer Leftover Residuals Scan right after!
+          showModal({
+            title: 'Desinstalación Completada',
+            message: `<strong>${escapeHtml(app.name)}</strong> fue desinstalado con éxito.<br><br>¿Deseas realizar una <strong>Limpieza Profunda de Residuos</strong> para eliminar carpetas huérfanas en AppData, ProgramData y rastros en el Registro de Windows?`,
+            type: 'info',
+            confirmText: 'Buscar Residuos Huérfanos',
+            cancelText: 'Omitir',
+            onConfirm: () => {
+              scanAndCleanResiduals(app.name, app.publisher);
+            }
+          });
+
+          await loadInstalledApps();
+        } catch (err) {
+          showModal({
+            title: 'Error al Desinstalar',
+            message: `No se pudo completar la desinstalación: ${err}`,
+            type: 'error'
+          });
+        }
+      }
+    });
+  }
+
+  async function scanAndCleanResiduals(appName, publisher) {
+    showModal({
+      title: 'Escaneando Residuos...',
+      message: `Analizando carpetas huérfanas en AppData, ProgramData y claves del Registro para <strong>${escapeHtml(appName)}</strong>...`,
+      type: 'info'
+    });
+
+    try {
+      const scanResult = await invokeNative('scan_app_residuals', {
+        appName,
+        publisher: publisher || ''
+      });
+
+      if (!scanResult || !scanResult.residuals || scanResult.residuals.length === 0) {
+        showModal({
+          title: 'Sistema Impecable',
+          message: `No se encontraron carpetas ni claves de registro residuales para <strong>${escapeHtml(appName)}</strong>. El sistema se encuentra 100% limpio.`,
+          type: 'info'
+        });
+        return;
+      }
+
+      const totalMb = (scanResult.total_size_bytes / (1024 * 1024)).toFixed(1);
+      const itemsListHtml = scanResult.residuals.map(r => `
+        <li style="margin-bottom: 6px; word-break: break-all;">
+          <span style="font-weight: 600; color: ${r.item_type === 'folder' ? 'var(--accent-amber)' : 'var(--accent-emerald)'};">
+            [${r.item_type === 'folder' ? 'CARPETA' : 'REGISTRO'}]
+          </span>
+          <code>${escapeHtml(r.path)}</code>
+          <span style="color: var(--text-dim); font-size: 11px;">(${r.description})</span>
+        </li>
+      `).join('');
+
+      showModal({
+        title: `Residuos Detectados (${scanResult.residuals.length})`,
+        message: `
+          Se detectaron <strong>${scanResult.residuals.length}</strong> elementos residuales que ocupan aproximadamente <strong>${totalMb} MB</strong>:<br><br>
+          <ul style="max-height: 220px; overflow-y: auto; font-size: 12px; padding-left: 18px; text-align: left; background: var(--bg-surface-elevated); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            ${itemsListHtml}
+          </ul><br>
+          ¿Deseas purgar de forma permanente todos estos archivos y claves huérfanas?
+        `,
+        type: 'warning',
+        confirmText: `Purgar Residuos (${totalMb} MB)`,
+        cancelText: 'Cancelar',
+        onConfirm: async () => {
+          try {
+            const paths = scanResult.residuals.map(r => r.path);
+            const cleanRes = await invokeNative('clean_app_residuals', { paths });
+
+            showModal({
+              title: 'Limpieza Profunda Completada',
+              message: cleanRes.message || `Se eliminaron exitosamente ${paths.length} elementos residuales.`,
+              type: 'info'
+            });
+
+            await loadInstalledApps();
+          } catch (cleanErr) {
+            showModal({
+              title: 'Error al Limpiar Residuos',
+              message: `Ocurrió un error al purgar elementos residuales: ${cleanErr}`,
+              type: 'error'
+            });
+          }
+        }
+      });
+    } catch (err) {
+      showModal({
+        title: 'Error en Escaneo',
+        message: `Error al escanear residuos: ${err}`,
+        type: 'error'
+      });
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   // Render Rollback Timeline
