@@ -23,11 +23,25 @@ pub fn run() {
             revert_transaction,
             get_hardware_metrics,
             clean_safe_temporary_files,
+            frontend_log,
         ])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
-                // Window configuration
                 let _ = window.set_focus();
+                let win_clone = window.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(2000));
+                    println!("[PRISTINE] URL after 2s: {:?}", win_clone.url());
+                    if let Err(e) = win_clone.eval(r#"
+                        console.log("PRISTINE WEBVIEW TEST EVAL");
+                    "#) {
+                        eprintln!("[PRISTINE] eval error: {:?}", e);
+                    }
+                });
+                #[cfg(debug_assertions)]
+                window.open_devtools();
+            } else {
+                eprintln!("[PRISTINE] Error: Could not find main window!");
             }
             Ok(())
         })

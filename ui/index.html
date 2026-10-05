@@ -14,6 +14,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pristine</title>
   <link rel="stylesheet" href="styles.css">
+  <script>
+    window.addEventListener('error', function(e) {
+      console.error('[PRISTINE WEBVIEW ERROR]', e.message, e.filename, e.lineno);
+    });
+  </script>
 </head>
 <body>
 

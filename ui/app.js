@@ -469,7 +469,8 @@
   }
 
   // App Initialization
-  window.addEventListener('DOMContentLoaded', () => {
+  function initApp() {
+    console.log('[PRISTINE] Initializing UI application...');
     setupNavigation();
     setupThemeHandlers();
     setupActions();
@@ -478,5 +479,13 @@
     // Start live metrics loop
     pollHardwareMetrics();
     setInterval(pollHardwareMetrics, 1500);
-  });
+
+    invokeNative('frontend_log', { msg: 'DOM and event handlers initialized successfully' }).catch(() => {});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+  } else {
+    initApp();
+  }
 })();

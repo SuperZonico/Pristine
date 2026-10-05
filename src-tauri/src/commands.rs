@@ -113,10 +113,16 @@ pub fn clean_safe_temporary_files() -> CleanupResult {
             }
         }
     }
-
     CleanupResult {
         bytes_freed,
         files_deleted,
         errors_encountered,
     }
 }
+
+#[tauri::command]
+pub fn frontend_log(msg: String) {
+    println!("[PRISTINE FRONTEND]: {}", msg);
+}
+
+
