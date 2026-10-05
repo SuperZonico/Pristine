@@ -1,0 +1,57 @@
+# ==============================================================================
+# Project:      Pristine — Windows 11 Optimization & Privacy Suite
+# Author:       SuperZonico
+# Purpose:      Git ignore rules
+# ==============================================================================
+
+# Rust / Cargo build artifacts
+/target/
+**/target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# Node / Frontend artifacts
+node_modules/
+dist/
+build/
+.pnpm-store/
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/gen/
+
+# Environment, Secrets and Local config
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.cer
+
+# Windows OS temporary files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Editor & IDE directories
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Pristine local runtime logs and test databases
+/logs/
+/scratch/
+*.log
+*.tmp

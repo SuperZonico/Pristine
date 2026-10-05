@@ -1,0 +1,78 @@
+# ==============================================================================
+# Project:      Pristine — Windows 11 Optimization & Privacy Suite
+# File:         Cargo.toml
+# Author:       SuperZonico
+# License:      MIT License
+# Purpose:      Root Cargo workspace definition and global profile configuration.
+# ==============================================================================
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/pristine-core",
+    "crates/pristine-winapi",
+    "crates/pristine-engine",
+    "crates/pristine-metrics",
+    "crates/pristine-ipc",
+    "src-tauri",
+]
+
+[workspace.package]
+version = "1.0.0"
+authors = ["SuperZonico"]
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/SuperZonico/Pristine"
+
+[workspace.dependencies]
+# Native Windows 11 API Bindings
+windows = { version = "0.58.0", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_System_Registry",
+    "Win32_System_Services",
+    "Win32_System_SystemInformation",
+    "Win32_System_SystemServices",
+    "Win32_System_Threading",
+    "Win32_System_Pipes",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Restore",
+    "Win32_Storage_FileSystem",
+    "Win32_UI_Shell",
+    "Win32_Graphics_Dwm",
+] }
+
+# Serialization & Integrity
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+
+# Error Handling & Utilities
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Internal workspace crates
+pristine-core = { path = "crates/pristine-core" }
+pristine-winapi = { path = "crates/pristine-winapi" }
+pristine-engine = { path = "crates/pristine-engine" }
+pristine-metrics = { path = "crates/pristine-metrics" }
+pristine-ipc = { path = "crates/pristine-ipc" }
+
+# Production Hardening Profiles
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+overflow-checks = true
+
+[profile.dev]
+opt-level = 0
+debug = true
+overflow-checks = true

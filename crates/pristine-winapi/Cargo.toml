@@ -1,0 +1,20 @@
+# ==============================================================================
+# Project:      Pristine — Windows 11 Optimization & Privacy Suite
+# File:         crates/pristine-winapi/Cargo.toml
+# Author:       SuperZonico
+# License:      MIT License
+# Purpose:      Safe native Win32/COM abstractions for Registry, Services, and Tasks.
+# ==============================================================================
+
+[package]
+name = "pristine-winapi"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pristine-core = { workspace = true }
+windows = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

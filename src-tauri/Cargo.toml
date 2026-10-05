@@ -1,0 +1,32 @@
+# ==============================================================================
+# Project:      Pristine — Windows 11 Optimization & Privacy Suite
+# File:         src-tauri/Cargo.toml
+# Author:       SuperZonico
+# License:      MIT License
+# Purpose:      Tauri v2 application entry manifest and native bindings.
+# ==============================================================================
+
+[package]
+name = "pristine-app"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "pristine_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.1", features = [] }
+
+[dependencies]
+pristine-core = { workspace = true }
+pristine-winapi = { workspace = true }
+pristine-engine = { workspace = true }
+pristine-metrics = { workspace = true }
+pristine-ipc = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+tauri = { version = "2.12.1", features = ["devtools"] }

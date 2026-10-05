@@ -1,0 +1,305 @@
+<!--
+  ============================================================================
+  Project:      Pristine — Windows 11 Optimization & Privacy Suite
+  File:         ui/index.html
+  Author:       SuperZonico
+  License:      MIT License
+  Purpose:      Main desktop application interface layout and views.
+  ============================================================================
+-->
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pristine</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="brand-grad" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#00f0a8" />
+            <stop offset="50%" stop-color="#00d2ff" />
+            <stop offset="100%" stop-color="#8b5cf6" />
+          </linearGradient>
+          <linearGradient id="facet-grad" x1="12" y1="8" x2="36" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="rgba(255,255,255,0.4)" />
+            <stop offset="100%" stop-color="rgba(255,255,255,0.02)" />
+          </linearGradient>
+        </defs>
+        <polygon points="24,4 42,14 42,34 24,44 6,34 6,14" stroke="url(#brand-grad)" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+        <polygon points="24,4 33,19 24,34 15,19" fill="url(#facet-grad)" />
+        <line x1="24" y1="4" x2="24" y2="34" stroke="url(#brand-grad)" stroke-width="1.5" />
+        <line x1="6" y1="14" x2="15" y2="19" stroke="url(#brand-grad)" stroke-width="1.5" />
+        <line x1="42" y1="14" x2="33" y2="19" stroke="url(#brand-grad)" stroke-width="1.5" />
+        <line x1="15" y1="19" x2="6" y2="34" stroke="url(#brand-grad)" stroke-width="1.5" />
+        <line x1="33" y1="19" x2="42" y2="34" stroke="url(#brand-grad)" stroke-width="1.5" />
+        <line x1="24" y1="34" x2="24" y2="44" stroke="url(#brand-grad)" stroke-width="1.5" />
+      </svg>
+      <div class="brand-text">
+        <span class="brand-title">PRISTINE</span>
+        <span class="brand-subtitle">Privacy & Performance</span>
+      </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu">
+      <div class="nav-item active" data-target="view-dashboard">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        <span>Dashboard</span>
+      </div>
+
+      <div class="nav-item" data-target="view-privacy">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+        <span>Privacidad</span>
+      </div>
+
+      <div class="nav-item" data-target="view-optimize">
+        <svg viewBox="0 0 24 24">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+        <span>Optimización</span>
+      </div>
+
+      <div class="nav-item" data-target="view-services">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span>Servicios</span>
+      </div>
+
+      <div class="nav-item" data-target="view-rollback">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span>Rollback</span>
+      </div>
+    </nav>
+
+    <!-- Sidebar Footer with Theme Switcher -->
+    <div class="sidebar-footer">
+      <div class="theme-selector">
+        <button class="theme-btn" id="btn-theme-light" title="Modo Claro">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+        </button>
+        <button class="theme-btn active" id="btn-theme-dark" title="Modo Oscuro">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+        <button class="theme-btn" id="btn-theme-auto" title="Sincronizar con el Sistema">
+          <svg viewBox="0 0 24 24">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span>Motor Activo</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Workspace -->
+  <main class="main-content">
+
+    <!-- VIEW 1: DASHBOARD -->
+    <section class="view-section active" id="view-dashboard">
+      <div class="view-header">
+        <div class="view-title-group">
+          <h1>Resumen del Sistema</h1>
+          <p>Estado de telemetría, privacidad y telemetría de hardware en tiempo real.</p>
+        </div>
+        <button class="btn btn-primary" id="btn-quick-scan">
+          <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          <span>Escanear Sistema</span>
+        </button>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Privacy Meter Card -->
+        <div class="card">
+          <div class="card-title">
+            <span>Puntuación de Privacidad</span>
+          </div>
+          <div class="privacy-meter-box">
+            <div class="meter-ring">
+              <svg class="meter-svg" viewBox="0 0 160 160">
+                <circle class="meter-bg-circle" cx="80" cy="80" r="70" />
+                <circle class="meter-val-circle" id="meter-circle" cx="80" cy="80" r="70" />
+              </svg>
+              <div class="meter-center-text">
+                <span class="meter-number" id="stat-score">--%</span>
+                <span class="meter-label" id="stat-score-label">Sin Analizar</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; text-align: center; font-size: 12px; color: var(--text-muted);">
+            <span id="stat-active-count">0</span> de <span id="stat-total-count">0</span> protecciones activas
+          </div>
+        </div>
+
+        <!-- Real-time Hardware Metrics -->
+        <div class="card">
+          <div class="card-title">
+            <span>Rendimiento de Hardware</span>
+            <span style="font-size: 11px; color: var(--accent-emerald);">Métricas Nativas Win32</span>
+          </div>
+
+          <div class="metrics-row">
+            <div class="metric-stat">
+              <div class="metric-header">
+                <span>Uso de CPU</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </div>
+              <div class="metric-val" id="val-cpu">0%</div>
+              <div class="progress-track">
+                <div class="progress-fill" id="fill-cpu" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <div class="metric-stat">
+              <div class="metric-header">
+                <span>Memoria RAM</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+              </div>
+              <div class="metric-val" id="val-ram">0%</div>
+              <div class="progress-track">
+                <div class="progress-fill" id="fill-ram" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 18px; display: flex; gap: 10px;">
+            <button class="btn btn-secondary" id="btn-apply-recommended" style="flex: 1;">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Aplicar Recomendados</span>
+            </button>
+            <button class="btn btn-secondary" id="btn-quick-clean" style="flex: 1;">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span>Limpiar Temporales</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: PRIVACY & TELEMETRY -->
+    <section class="view-section" id="view-privacy">
+      <div class="view-header">
+        <div class="view-title-group">
+          <h1>Directivas de Privacidad y Telemetría</h1>
+          <p>Configuración granular de rastreo, IA, Cortana, Bing y telemetría diagnóstica.</p>
+        </div>
+        <button class="btn btn-primary" id="btn-save-privacy">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <span>Aplicar Cambios</span>
+        </button>
+      </div>
+
+      <div class="tweaks-container" id="privacy-tweaks-list">
+        <!-- Injected dynamically via app.js -->
+      </div>
+    </section>
+
+    <!-- VIEW 3: OPTIMIZATION -->
+    <section class="view-section" id="view-optimize">
+      <div class="view-header">
+        <div class="view-title-group">
+          <h1>Optimización y Limpieza Inteligente</h1>
+          <p>Liberación de espacio sin tocar cachés útiles y mitigación de latencia de red.</p>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card-title">
+            <span>Limpiador de Temporales Seguro</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
+            Elimina únicamente archivos temporales de más de 24 horas de antigüedad que no estén siendo utilizados por ninguna aplicación activa.
+          </p>
+          <div style="font-size: 22px; font-weight: 700; color: var(--accent-emerald); margin-bottom: 16px;" id="clean-status">
+            Listo para analizar
+          </div>
+          <button class="btn btn-primary" id="btn-run-cleaner">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Ejecutar Limpieza Segura</span>
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Almacén de Componentes WinSxS</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
+            Reduce el almacén de componentes del sistema mediante el comando oficial seguro de DISM, descartando versiones obsoletas de parches previos.
+          </p>
+          <div style="font-size: 12px; color: var(--text-dim); background: var(--bg-surface-elevated); padding: 10px; border-radius: 6px; font-family: monospace;">
+            Dism.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: SERVICES -->
+    <section class="view-section" id="view-services">
+      <div class="view-header">
+        <div class="view-title-group">
+          <h1>Auditoría de Servicios SCM</h1>
+          <p>Estado en tiempo real de los servicios del sistema.</p>
+        </div>
+      </div>
+      <div class="tweaks-container" id="services-list">
+        <!-- Injected dynamically -->
+      </div>
+    </section>
+
+    <!-- VIEW 5: ROLLBACK JOURNAL -->
+    <section class="view-section" id="view-rollback">
+      <div class="view-header">
+        <div class="view-title-group">
+          <h1>Diario de Transacciones y Rollback</h1>
+          <p>Historial verificado criptográficamente con reversión atómica en 1-clic.</p>
+        </div>
+      </div>
+      <div class="timeline" id="rollback-list">
+        <div style="font-size: 13px; color: var(--text-muted); padding: 12px 0;">
+          No hay transacciones previas registradas. Aplica cambios para generar sesiones de rollback.
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

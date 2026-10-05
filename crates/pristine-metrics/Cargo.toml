@@ -1,0 +1,21 @@
+# ==============================================================================
+# Project:      Pristine — Windows 11 Optimization & Privacy Suite
+# File:         crates/pristine-metrics/Cargo.toml
+# Author:       SuperZonico
+# License:      MIT License
+# Purpose:      High-performance PDH and kernel metric collector for Windows 11.
+# ==============================================================================
+
+[package]
+name = "pristine-metrics"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pristine-core = { workspace = true }
+windows = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

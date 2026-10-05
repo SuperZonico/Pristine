@@ -1,0 +1,22 @@
+# ==============================================================================
+# Project:      Pristine — Windows 11 Optimization & Privacy Suite
+# File:         crates/pristine-engine/Cargo.toml
+# Author:       SuperZonico
+# License:      MIT License
+# Purpose:      Optimization engine, atomic transaction manager, and audit planner.
+# ==============================================================================
+
+[package]
+name = "pristine-engine"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pristine-core = { workspace = true }
+pristine-winapi = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
