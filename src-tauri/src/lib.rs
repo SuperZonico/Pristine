@@ -31,20 +31,7 @@ pub fn run() {
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
-                let win_clone = window.clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(2000));
-                    println!("[PRISTINE] URL after 2s: {:?}", win_clone.url());
-                    if let Err(e) = win_clone.eval(
-                        r#"
-                        console.log("PRISTINE WEBVIEW TEST EVAL");
-                    "#,
-                    ) {
-                        eprintln!("[PRISTINE] eval error: {:?}", e);
-                    }
-                });
-                #[cfg(debug_assertions)]
-                window.open_devtools();
+                let _ = window.navigate("http://tauri.localhost/".parse().unwrap());
             } else {
                 eprintln!("[PRISTINE] Error: Could not find main window!");
             }
