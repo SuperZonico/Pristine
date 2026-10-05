@@ -487,6 +487,52 @@ body {
   border-color: rgba(255, 255, 255, 0.16);
 }
 
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: none !important;
+}
+
+/* ==========================================================================
+   Filter Bar & Category Tabs
+   ========================================================================== */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  background: var(--bg-surface);
+  padding: 5px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  width: fit-content;
+}
+
+.filter-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filter-tab:hover {
+  color: var(--text-main);
+  background: var(--bg-surface-hover);
+}
+
+.filter-tab.active {
+  background: var(--bg-surface-elevated);
+  color: var(--accent-emerald);
+  border-color: var(--border-active);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 /* ==========================================================================
    Tweak Cards List
    ========================================================================== */

@@ -9,8 +9,12 @@
  */
 
 use pristine_core::models::{TweakAction, TweakDefinition};
-use pristine_core::transaction::{RegistryRollbackEntry, ServiceRollbackEntry, TransactionSession};
-use pristine_winapi::{configure_service, write_registry_value, WinApiError};
+use pristine_core::transaction::{
+    RegistryRollbackEntry, ServiceRollbackEntry, TaskRollbackEntry, TransactionSession,
+};
+use pristine_winapi::{
+    configure_service, configure_task, query_task_enabled, write_registry_value, WinApiError,
+};
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
@@ -60,8 +64,14 @@ pub fn apply_tweak(
                     });
                 }
             }
-            TweakAction::Task(_) => {
-                // Task mutation stub
+            TweakAction::Task(task) => {
+                let prior = query_task_enabled(&task.task_path, &task.task_name);
+                let _ = configure_task(&task.task_path, &task.task_name, task.enable);
+                session.task_rollbacks.push(TaskRollbackEntry {
+                    task_path: task.task_path.clone(),
+                    task_name: task.task_name.clone(),
+                    previously_enabled: prior,
+                });
             }
         }
     }

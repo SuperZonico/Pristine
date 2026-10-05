@@ -11,10 +11,12 @@
 pub mod error;
 pub mod registry;
 pub mod services;
+pub mod tasks;
 
 pub use error::WinApiError;
 pub use registry::{delete_registry_value, read_registry_value, write_registry_value, SafeRegKey};
 pub use services::{configure_service, query_service, ServiceStatusInfo};
+pub use tasks::{configure_task, query_task_enabled};
 
 #[cfg(test)]
 mod tests {

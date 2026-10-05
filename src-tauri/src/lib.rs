@@ -20,9 +20,12 @@ pub fn run() {
             get_catalog,
             audit_system,
             apply_tweaks,
+            get_transaction_history,
             revert_transaction,
             get_hardware_metrics,
             clean_safe_temporary_files,
+            clean_winsxs_component_store,
+            create_system_restore_point,
             frontend_log,
         ])
         .setup(|app| {
@@ -32,9 +35,11 @@ pub fn run() {
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_millis(2000));
                     println!("[PRISTINE] URL after 2s: {:?}", win_clone.url());
-                    if let Err(e) = win_clone.eval(r#"
+                    if let Err(e) = win_clone.eval(
+                        r#"
                         console.log("PRISTINE WEBVIEW TEST EVAL");
-                    "#) {
+                    "#,
+                    ) {
                         eprintln!("[PRISTINE] eval error: {:?}", e);
                     }
                 });

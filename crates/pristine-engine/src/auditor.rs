@@ -11,7 +11,7 @@
 use pristine_core::models::{
     SystemAuditReport, TweakAction, TweakAuditStatus, TweakDefinition, TweakState,
 };
-use pristine_winapi::{query_service, read_registry_value};
+use pristine_winapi::{query_service, query_task_enabled, read_registry_value};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn audit_tweak(tweak: &TweakDefinition) -> TweakAuditStatus {
@@ -43,9 +43,13 @@ pub fn audit_tweak(tweak: &TweakDefinition) -> TweakAuditStatus {
                     all_match = false;
                 }
             },
-            TweakAction::Task(_) => {
-                // Task state evaluation stub
-                all_match = false;
+            TweakAction::Task(task) => {
+                let is_enabled = query_task_enabled(&task.task_path, &task.task_name);
+                if is_enabled == task.enable {
+                    any_match = true;
+                } else {
+                    all_match = false;
+                }
             }
         }
     }

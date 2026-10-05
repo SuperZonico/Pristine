@@ -45,5 +45,14 @@ pub fn revert_session(session: &TransactionSession) -> Result<(), RollbackError>
         let _ = configure_service(&srv.service_name, srv.previous_startup, false);
     }
 
+    // Revert task configurations
+    for task in session.task_rollbacks.iter().rev() {
+        let _ = pristine_winapi::configure_task(
+            &task.task_path,
+            &task.task_name,
+            task.previously_enabled,
+        );
+    }
+
     Ok(())
 }

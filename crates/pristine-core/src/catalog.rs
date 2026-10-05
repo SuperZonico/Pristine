@@ -1,10 +1,10 @@
 /*
  * ============================================================================
- * Project:      Pristine — Windows 11 Optimization & Privacy Suite
+ * Project:      Pristine — Privacy & Performance Suite
  * File:         crates/pristine-core/src/catalog.rs
  * Author:       SuperZonico
  * License:      MIT License
- * Purpose:      Curated catalog of Windows 11 policies, telemetry, and latency tweaks.
+ * Purpose:      Comprehensive catalog of Windows policies, telemetry, and latency tweaks.
  * ============================================================================
  */
 
@@ -111,7 +111,7 @@ pub fn get_default_catalog() -> Vec<TweakDefinition> {
             default_recommended: true,
         },
 
-        // 5. Windows 11 AI Recall & Screen Analysis (24H2)
+        // 5. Windows AI Recall & Screen Analysis
         TweakDefinition {
             id: "windows_recall_ai".to_string(),
             title: "Windows Recall & AI Continuous Snapshots".to_string(),
@@ -123,6 +123,12 @@ pub fn get_default_catalog() -> Vec<TweakDefinition> {
                 TweakAction::Registry(RegistryMutation {
                     root: RegistryRoot::HkeyLocalMachine,
                     subkey: r"SOFTWARE\Policies\Microsoft\Windows\WindowsAI".to_string(),
+                    value_name: "DisableAIDataAnalysis".to_string(),
+                    target_value: RegistryValueKind::Dword(1),
+                }),
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyCurrentUser,
+                    subkey: r"Software\Policies\Microsoft\Windows\WindowsAI".to_string(),
                     value_name: "DisableAIDataAnalysis".to_string(),
                     target_value: RegistryValueKind::Dword(1),
                 }),
@@ -250,6 +256,249 @@ pub fn get_default_catalog() -> Vec<TweakDefinition> {
                     subkey: r"SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting".to_string(),
                     value_name: "DoNotSendAdditionalData".to_string(),
                     target_value: RegistryValueKind::Dword(1),
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 11. Microsoft Edge Telemetry & Background Mode
+        TweakDefinition {
+            id: "edge_telemetry".to_string(),
+            title: "Microsoft Edge Telemetry & Background Acceleration".to_string(),
+            description: "Disables telemetry reporting and prevents Edge from running silent background processes on startup.".to_string(),
+            category: TweakCategory::Telemetry,
+            risk: RiskLevel::Safe,
+            impact_details: "Frees up RAM on boot and stops Edge diagnostic beacon transmissions.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Edge".to_string(),
+                    value_name: "MetricsReportingEnabled".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Edge".to_string(),
+                    value_name: "StartupBoostEnabled".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Edge".to_string(),
+                    value_name: "BackgroundModeEnabled".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 12. Cortana Voice Telemetry & Search Sync
+        TweakDefinition {
+            id: "cortana_voice_telemetry".to_string(),
+            title: "Cortana & Speech Telemetry".to_string(),
+            description: "Disables Cortana digital assistant integration and background voice model upload.".to_string(),
+            category: TweakCategory::Privacy,
+            risk: RiskLevel::Safe,
+            impact_details: "Stops background speech telemetry packets from sending audio data.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Windows\Windows Search".to_string(),
+                    value_name: "AllowCortana".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyCurrentUser,
+                    subkey: r"Software\Microsoft\Speech_OneCore\Preferences".to_string(),
+                    value_name: "ModelDownloadAllowed".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 13. Activity History & Timeline Sync
+        TweakDefinition {
+            id: "activity_history_sync".to_string(),
+            title: "Windows Activity History Tracking & Sync".to_string(),
+            description: "Stops Windows from recording chronological application usage history and syncing it to Microsoft accounts.".to_string(),
+            category: TweakCategory::Privacy,
+            risk: RiskLevel::Safe,
+            impact_details: "Keeps your application launching habits completely private and off cloud servers.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Windows\System".to_string(),
+                    value_name: "EnableActivityFeed".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Windows\System".to_string(),
+                    value_name: "PublishUserActivities".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Windows\System".to_string(),
+                    value_name: "UploadUserActivities".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 14. Geolocation Tracking Service
+        TweakDefinition {
+            id: "location_sensor".to_string(),
+            title: "Background Geolocation Tracking".to_string(),
+            description: "Disables the background location sensor service and blocks system-wide geofencing queries.".to_string(),
+            category: TweakCategory::Privacy,
+            risk: RiskLevel::Safe,
+            impact_details: "Prevents background services from polling your physical coordinates.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors".to_string(),
+                    value_name: "DisableLocation".to_string(),
+                    target_value: RegistryValueKind::Dword(1),
+                }),
+                TweakAction::Service(ServiceMutation {
+                    service_name: "lfsvc".to_string(),
+                    target_startup: ServiceStartupMode::Disabled,
+                    stop_if_running: true,
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 15. Tailored Experiences & Diagnostic Feedback Prompts
+        TweakDefinition {
+            id: "tailored_experiences".to_string(),
+            title: "Tailored Experiences & Feedback Prompts".to_string(),
+            description: "Stops diagnostic data from being used to serve suggestions, tips, and promotional recommendations.".to_string(),
+            category: TweakCategory::Privacy,
+            risk: RiskLevel::Safe,
+            impact_details: "Removes intrusive 'How likely are you to recommend Windows?' popups and suggested Store apps.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyCurrentUser,
+                    subkey: r"Software\Policies\Microsoft\Windows\CloudContent".to_string(),
+                    value_name: "DisableTailoredExperiencesWithDiagnosticData".to_string(),
+                    target_value: RegistryValueKind::Dword(1),
+                }),
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyCurrentUser,
+                    subkey: r"Software\Microsoft\Siuf\Rules".to_string(),
+                    value_name: "NumberOfSIUFInPeriod".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 16. GameDVR Background Capture (DPC Latency Optimizer)
+        TweakDefinition {
+            id: "game_dvr_latency".to_string(),
+            title: "GameDVR Background Capture & Latency Tuning".to_string(),
+            description: "Disables background video recording hooks that cause frame pacing drops and DPC latency spikes.".to_string(),
+            category: TweakCategory::Latency,
+            risk: RiskLevel::Safe,
+            impact_details: "Smooths micro-stutter in competitive games without disabling Xbox Live authentication.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyCurrentUser,
+                    subkey: r"System\GameConfigStore".to_string(),
+                    value_name: "GameDVR_Enabled".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Windows\GameDVR".to_string(),
+                    value_name: "AllowGameDVR".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 17. Cloud Clipboard Synchronization
+        TweakDefinition {
+            id: "cloud_clipboard_sync".to_string(),
+            title: "Cloud Clipboard Synchronization (Local Only)".to_string(),
+            description: "Restricts clipboard history strictly to your local machine, blocking sync to remote Microsoft servers.".to_string(),
+            category: TweakCategory::Privacy,
+            risk: RiskLevel::Safe,
+            impact_details: "Keeps sensitive copied passwords and tokens from ever leaving your device memory.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Policies\Microsoft\Windows\System".to_string(),
+                    value_name: "AllowCrossDeviceClipboard".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyCurrentUser,
+                    subkey: r"Software\Microsoft\Clipboard".to_string(),
+                    value_name: "EnableClipboardHistory".to_string(),
+                    target_value: RegistryValueKind::Dword(1), // keep local history enabled
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 18. Cross-Application Diagnostics
+        TweakDefinition {
+            id: "app_diagnostics".to_string(),
+            title: "Cross-App Diagnostic Access".to_string(),
+            description: "Prevents third-party Store apps from interrogating diagnostic info of other concurrently running applications.".to_string(),
+            category: TweakCategory::Privacy,
+            risk: RiskLevel::Safe,
+            impact_details: "Enhances inter-process privacy and isolation.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyCurrentUser,
+                    subkey: r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\appDiagnostics".to_string(),
+                    value_name: "Value".to_string(),
+                    target_value: RegistryValueKind::String("Deny".to_string()),
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 19. Wi-Fi Sense Automatic Shared Network Connection
+        TweakDefinition {
+            id: "wifi_sense".to_string(),
+            title: "Wi-Fi Sense Credential Sharing".to_string(),
+            description: "Disables automatic connection to open hotspots and contacts-shared Wi-Fi networks.".to_string(),
+            category: TweakCategory::SecurityEnhancement,
+            risk: RiskLevel::Safe,
+            impact_details: "Prevents accidental connection to untrusted open wireless access points.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config".to_string(),
+                    value_name: "AutoConnectAllowedOEM".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
+                }),
+            ],
+            default_recommended: true,
+        },
+
+        // 20. Remote Assistance Solicited Requests
+        TweakDefinition {
+            id: "remote_assistance_solicited".to_string(),
+            title: "Unsolicited Remote Assistance Offers".to_string(),
+            description: "Blocks external systems from offering remote assistance sessions to this computer.".to_string(),
+            category: TweakCategory::SecurityEnhancement,
+            risk: RiskLevel::Safe,
+            impact_details: "Mitigates unauthorized remote takeover attempts while standard RDP remains under user control.".to_string(),
+            actions: vec![
+                TweakAction::Registry(RegistryMutation {
+                    root: RegistryRoot::HkeyLocalMachine,
+                    subkey: r"SYSTEM\CurrentControlSet\Control\Remote Assistance".to_string(),
+                    value_name: "fAllowToGetHelp".to_string(),
+                    target_value: RegistryValueKind::Dword(0),
                 }),
             ],
             default_recommended: true,

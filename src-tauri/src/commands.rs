@@ -11,8 +11,13 @@
 use pristine_core::catalog::get_default_catalog;
 use pristine_core::models::{SystemAuditReport, TweakDefinition};
 use pristine_core::transaction::TransactionSession;
-use pristine_engine::{apply_tweak, create_transaction_session, revert_session, run_full_audit};
+use pristine_engine::{
+    apply_tweak, create_transaction_session, load_journal, remove_session, revert_session,
+    run_full_audit, save_session,
+};
 use pristine_metrics::{HardwareMetrics, MetricsCollector};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::sync::Mutex;
 use tauri::State;
 
@@ -53,12 +58,22 @@ pub fn apply_tweaks(
         }
     }
 
+    // Persist session to local disk journal
+    let _ = save_session(&session);
+
     Ok(session)
 }
 
 #[tauri::command]
+pub fn get_transaction_history() -> Vec<TransactionSession> {
+    load_journal()
+}
+
+#[tauri::command]
 pub fn revert_transaction(session: TransactionSession) -> Result<(), String> {
-    revert_session(&session).map_err(|e| e.to_string())
+    revert_session(&session).map_err(|e| e.to_string())?;
+    let _ = remove_session(&session.session_id);
+    Ok(())
 }
 
 #[tauri::command]
@@ -125,4 +140,93 @@ pub fn frontend_log(msg: String) {
     println!("[PRISTINE FRONTEND]: {}", msg);
 }
 
+#[derive(serde::Serialize)]
+pub struct OperationResult {
+    pub success: bool,
+    pub message: String,
+}
 
+#[tauri::command]
+pub fn clean_winsxs_component_store() -> OperationResult {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = std::process::Command::new("dism.exe");
+        cmd.args(["/Online", "/Cleanup-Image", "/StartComponentCleanup"]);
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+        match cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                if output.status.success() {
+                    OperationResult {
+                        success: true,
+                        message: "Almacén WinSxS compactado y limpiado exitosamente.".to_string(),
+                    }
+                } else {
+                    OperationResult {
+                        success: false,
+                        message: format!(
+                            "Error en DISM: {}",
+                            if !stderr.is_empty() { stderr } else { stdout }
+                        ),
+                    }
+                }
+            }
+            Err(e) => OperationResult {
+                success: false,
+                message: format!("No se pudo invocar DISM: {}", e),
+            },
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        OperationResult {
+            success: true,
+            message: "Simulación de limpieza WinSxS en entorno no Windows.".to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn create_system_restore_point() -> OperationResult {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = std::process::Command::new("powershell.exe");
+        cmd.args([
+            "-NoProfile",
+            "-Command",
+            "Checkpoint-Computer -Description 'Pristine Punto de Seguridad' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop",
+        ]);
+        cmd.creation_flags(0x08000000);
+
+        match cmd.output() {
+            Ok(output) => {
+                if output.status.success() {
+                    OperationResult {
+                        success: true,
+                        message: "Punto de restauración del sistema (VSS) creado exitosamente."
+                            .to_string(),
+                    }
+                } else {
+                    let err = String::from_utf8_lossy(&output.stderr).to_string();
+                    OperationResult {
+                        success: false,
+                        message: format!("No se pudo crear punto de restauración (puede requerir permisos de Administrador): {}", err),
+                    }
+                }
+            }
+            Err(e) => OperationResult {
+                success: false,
+                message: format!("Error al ejecutar Checkpoint-Computer: {}", e),
+            },
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        OperationResult {
+            success: true,
+            message: "Simulación de punto de restauración en entorno no Windows.".to_string(),
+        }
+    }
+}

@@ -1,11 +1,11 @@
 /*
  * ============================================================================
- * Project:      Pristine — Windows 11 Optimization & Privacy Suite
+ * Project:      Pristine — Privacy & Performance Suite
  * File:         ui/app.js
  * Author:       SuperZonico
  * License:      MIT License
- * Purpose:      Frontend application logic, Tauri IPC bindings, theme sync,
- *               and reactive telemetry rendering.
+ * Purpose:      Frontend application logic, Tauri IPC bindings, reactive state,
+ *               category filtering, VSS snapshot trigger, and rollback manager.
  * ============================================================================
  */
 
@@ -16,6 +16,7 @@
     audit: null,
     sessions: [],
     selectedTweakIds: new Set(),
+    selectedCategory: 'all',
     themeMode: 'dark', // 'dark', 'light', 'auto'
   };
 
@@ -141,6 +142,18 @@
       };
     }
 
+    if (cmd === 'clean_winsxs_component_store') {
+      return 'Limpieza de almacén de componentes DISM completada con éxito. Código de salida: 0.';
+    }
+
+    if (cmd === 'create_system_restore_point') {
+      return 'Punto de restauración VSS "Pristine Safe Optimization" creado exitosamente.';
+    }
+
+    if (cmd === 'get_transaction_history') {
+      return [];
+    }
+
     if (cmd === 'apply_tweaks') {
       return {
         session_id: 'sess_' + Date.now(),
@@ -167,10 +180,12 @@
   const elCpuFill = document.getElementById('fill-cpu');
   const elRamVal = document.getElementById('val-ram');
   const elRamFill = document.getElementById('fill-ram');
+  const elRamUsage = document.getElementById('val-ram-usage');
 
   const elPrivacyList = document.getElementById('privacy-tweaks-list');
   const elServicesList = document.getElementById('services-list');
   const elRollbackList = document.getElementById('rollback-list');
+  const elSelectionCount = document.getElementById('lbl-selection-count');
 
   // Navigation Logic
   function setupNavigation() {
@@ -214,6 +229,19 @@
     });
   }
 
+  // Category Filter Tabs Logic
+  function setupCategoryFilters() {
+    const tabs = document.querySelectorAll('.filter-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        state.selectedCategory = tab.getAttribute('data-category') || 'all';
+        renderCatalog();
+      });
+    });
+  }
+
   // Update Privacy Score Meter
   function updatePrivacyMeter(percent) {
     elScore.textContent = `${percent}%`;
@@ -233,6 +261,12 @@
     }
   }
 
+  function updateSelectionCountLabel() {
+    if (elSelectionCount) {
+      elSelectionCount.textContent = `${state.selectedTweakIds.size} seleccionadas`;
+    }
+  }
+
   // Live Metrics Loop
   async function pollHardwareMetrics() {
     if (document.hidden) return; // Pause polling when minimized to consume 0% CPU
@@ -245,6 +279,12 @@
 
         elRamVal.textContent = `${metrics.ram_percent}%`;
         elRamFill.style.width = `${metrics.ram_percent}%`;
+
+        if (elRamUsage && metrics.ram_total_mb > 0) {
+          const usedGb = (metrics.ram_used_mb / 1024).toFixed(1);
+          const totalGb = (metrics.ram_total_mb / 1024).toFixed(1);
+          elRamUsage.textContent = `${usedGb} / ${totalGb} GB (${metrics.ram_percent}%)`;
+        }
       }
     } catch (_) {}
   }
@@ -255,8 +295,8 @@
     card.className = 'tweak-card';
     card.id = `card-${tweak.id}`;
 
-    const isActive = status && status.state === 'active';
-    if (isActive) card.classList.add('active-card');
+    const isChecked = state.selectedTweakIds.has(tweak.id);
+    if (isChecked) card.classList.add('active-card');
 
     const riskClass = tweak.risk === 'safe' ? 'risk-safe' : tweak.risk === 'moderate' ? 'risk-moderate' : 'risk-critical';
     const riskLabel = tweak.risk === 'safe' ? 'Seguro' : tweak.risk === 'moderate' ? 'Moderado' : 'Avanzado';
@@ -271,7 +311,7 @@
           <p class="tweak-desc">${tweak.description}</p>
         </div>
         <label class="switch">
-          <input type="checkbox" id="toggle-${tweak.id}" ${isActive ? 'checked' : ''}>
+          <input type="checkbox" id="toggle-${tweak.id}" ${isChecked ? 'checked' : ''}>
           <span class="slider"></span>
         </label>
       </div>
@@ -305,6 +345,7 @@
         state.selectedTweakIds.delete(tweak.id);
         card.classList.remove('active-card');
       }
+      updateSelectionCountLabel();
     });
 
     return card;
@@ -314,17 +355,26 @@
   async function loadData() {
     try {
       state.catalog = await invokeNative('get_catalog');
-      if (state.catalog && state.catalog.length > 0) {
-        renderCatalog();
-      }
 
       state.audit = await invokeNative('audit_system');
       if (state.audit) {
         updatePrivacyMeter(state.audit.privacy_score_percent);
         elActiveCount.textContent = state.audit.active_count;
         elTotalCount.textContent = state.audit.total_analyzed;
-        renderCatalog();
+
+        // Initialize selected tweak IDs from active audit state if empty
+        if (state.selectedTweakIds.size === 0) {
+          state.audit.statuses.forEach(s => {
+            if (s.state === 'active') {
+              state.selectedTweakIds.add(s.tweak_id);
+            }
+          });
+        }
       }
+
+      renderCatalog();
+      updateSelectionCountLabel();
+      await loadTransactionHistory();
     } catch (err) {
       console.error('Error loading catalog and audit:', err);
     }
@@ -334,20 +384,37 @@
     elPrivacyList.innerHTML = '';
     elServicesList.innerHTML = '';
 
+    const currentFilter = state.selectedCategory;
+
     state.catalog.forEach(tweak => {
       const status = state.audit ? state.audit.statuses.find(s => s.tweak_id === tweak.id) : null;
-      if (status && status.state === 'active') {
-        state.selectedTweakIds.add(tweak.id);
+
+      // Filter by category in privacy view
+      const matchesFilter = currentFilter === 'all' || tweak.category === currentFilter;
+      if (matchesFilter) {
+        const card = renderTweakCard(tweak, status);
+        elPrivacyList.appendChild(card);
       }
 
-      const card = renderTweakCard(tweak, status);
-      elPrivacyList.appendChild(card);
-
-      if (tweak.category === 'telemetry') {
+      // Populate services tab with telemetry and latency tweaks
+      if (tweak.category === 'telemetry' || tweak.category === 'latency') {
         const srvCard = renderTweakCard(tweak, status);
         elServicesList.appendChild(srvCard);
       }
     });
+  }
+
+  // Load Transaction History from Persistent Journal
+  async function loadTransactionHistory() {
+    try {
+      const history = await invokeNative('get_transaction_history');
+      if (Array.isArray(history)) {
+        state.sessions = history;
+        renderRollbackHistory();
+      }
+    } catch (err) {
+      console.error('Error loading transaction history:', err);
+    }
   }
 
   // Setup Action Handlers
@@ -364,17 +431,36 @@
       btn.querySelector('span').textContent = 'Escanear Sistema';
     });
 
-    // Apply Recommended
+    // Create VSS System Restore Point
+    const btnRestorePoint = document.getElementById('btn-create-restore-point');
+    if (btnRestorePoint) {
+      btnRestorePoint.addEventListener('click', async () => {
+        btnRestorePoint.disabled = true;
+        const span = btnRestorePoint.querySelector('span');
+        const prevText = span.textContent;
+        span.textContent = 'Creando Snapshot VSS...';
+
+        try {
+          const res = await invokeNative('create_system_restore_point');
+          alert(res || 'Snapshot VSS creado exitosamente.');
+        } catch (err) {
+          alert('Error al crear punto de restauración VSS: ' + err);
+        } finally {
+          btnRestorePoint.disabled = false;
+          span.textContent = prevText;
+        }
+      });
+    }
+
+    // Apply Recommended Tweaks
     document.getElementById('btn-apply-recommended').addEventListener('click', () => {
       state.catalog.forEach(tweak => {
         if (tweak.default_recommended) {
           state.selectedTweakIds.add(tweak.id);
-          const toggle = document.getElementById(`toggle-${tweak.id}`);
-          if (toggle) toggle.checked = true;
-          const card = document.getElementById(`card-${tweak.id}`);
-          if (card) card.classList.add('active-card');
         }
       });
+      renderCatalog();
+      updateSelectionCountLabel();
     });
 
     // Save Privacy Changes
@@ -386,7 +472,7 @@
       try {
         const session = await invokeNative('apply_tweaks', {
           tweakIds: Array.from(state.selectedTweakIds),
-          description: 'Ajuste manual de directivas de privacidad'
+          description: 'Ajuste de directivas de privacidad y optimización'
         });
 
         if (session) {
@@ -403,14 +489,15 @@
       }
     });
 
-    // Safe Cleaner
+    // Safe Temporary Files Cleaner
     const btnClean = document.getElementById('btn-run-cleaner');
     const elCleanStatus = document.getElementById('clean-status');
     const btnQuickClean = document.getElementById('btn-quick-clean');
 
     async function runCleaning() {
       btnClean.disabled = true;
-      elCleanStatus.textContent = 'Analizando y purgando archivos...';
+      if (btnQuickClean) btnQuickClean.disabled = true;
+      elCleanStatus.textContent = 'Analizando y purgando archivos seguros...';
 
       try {
         const res = await invokeNative('clean_safe_temporary_files');
@@ -422,16 +509,56 @@
         elCleanStatus.textContent = 'Error al ejecutar limpieza: ' + err;
       } finally {
         btnClean.disabled = false;
+        if (btnQuickClean) btnQuickClean.disabled = false;
       }
     }
 
     btnClean.addEventListener('click', runCleaning);
-    btnQuickClean.addEventListener('click', runCleaning);
+    if (btnQuickClean) btnQuickClean.addEventListener('click', runCleaning);
+
+    // WinSxS Component Store Cleaner (DISM)
+    const btnDism = document.getElementById('btn-run-dism');
+    const elDismStatus = document.getElementById('dism-status');
+
+    if (btnDism) {
+      btnDism.addEventListener('click', async () => {
+        btnDism.disabled = true;
+        elDismStatus.textContent = 'Ejecutando DISM /StartComponentCleanup (puede tardar unos minutos)...';
+
+        try {
+          const out = await invokeNative('clean_winsxs_component_store');
+          elDismStatus.textContent = out || 'Limpieza de almacén WinSxS completada con éxito.';
+        } catch (err) {
+          elDismStatus.textContent = 'Error al ejecutar DISM: ' + err;
+        } finally {
+          btnDism.disabled = false;
+        }
+      });
+    }
+
+    // Refresh Rollback History Button
+    const btnRefreshRollback = document.getElementById('btn-refresh-rollback');
+    if (btnRefreshRollback) {
+      btnRefreshRollback.addEventListener('click', async () => {
+        btnRefreshRollback.disabled = true;
+        await loadTransactionHistory();
+        btnRefreshRollback.disabled = false;
+      });
+    }
   }
 
   // Render Rollback Timeline
   function renderRollbackHistory() {
-    if (state.sessions.length === 0) return;
+    if (!elRollbackList) return;
+
+    if (state.sessions.length === 0) {
+      elRollbackList.innerHTML = `
+        <div style="font-size: 13px; color: var(--text-muted); padding: 12px 0;">
+          No hay transacciones previas registradas. Aplica cambios para generar sesiones de rollback.
+        </div>
+      `;
+      return;
+    }
 
     elRollbackList.innerHTML = '';
     state.sessions.forEach(session => {
@@ -457,6 +584,7 @@
           try {
             await invokeNative('revert_transaction', { session });
             alert('Sesión revertida exitosamente.');
+            await loadTransactionHistory();
             await loadData();
           } catch (err) {
             alert('Error al revertir sesión: ' + err);
@@ -473,6 +601,7 @@
     console.log('[PRISTINE] Initializing UI application...');
     setupNavigation();
     setupThemeHandlers();
+    setupCategoryFilters();
     setupActions();
     loadData();
 
@@ -480,7 +609,7 @@
     pollHardwareMetrics();
     setInterval(pollHardwareMetrics, 1500);
 
-    invokeNative('frontend_log', { msg: 'DOM and event handlers initialized successfully' }).catch(() => {});
+    invokeNative('frontend_log', { msg: 'DOM, category filters, and handlers initialized successfully' }).catch(() => {});
   }
 
   if (document.readyState === 'loading') {

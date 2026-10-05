@@ -1,6 +1,6 @@
 <!--
   ============================================================================
-  Project:      Pristine — Windows 11 Optimization & Privacy Suite
+  Project:      Pristine — Privacy & Performance Suite
   File:         ui/index.html
   Author:       SuperZonico
   License:      MIT License
@@ -141,12 +141,18 @@
       <div class="view-header">
         <div class="view-title-group">
           <h1>Resumen del Sistema</h1>
-          <p>Estado de telemetría, privacidad y telemetría de hardware en tiempo real.</p>
+          <p>Estado de telemetría, directivas de privacidad y métricas de hardware en tiempo real.</p>
         </div>
-        <button class="btn btn-primary" id="btn-quick-scan">
-          <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          <span>Escanear Sistema</span>
-        </button>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" id="btn-create-restore-point" title="Crea un punto de restauración del sistema VSS">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Crear Snapshot VSS</span>
+          </button>
+          <button class="btn btn-primary" id="btn-quick-scan">
+            <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            <span>Escanear Sistema</span>
+          </button>
+        </div>
       </div>
 
       <div class="dashboard-grid">
@@ -200,6 +206,7 @@
               <div class="progress-track">
                 <div class="progress-fill" id="fill-ram" style="width: 0%;"></div>
               </div>
+              <div id="val-ram-usage" style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">-- / -- GB</div>
             </div>
           </div>
 
@@ -224,10 +231,22 @@
           <h1>Directivas de Privacidad y Telemetría</h1>
           <p>Configuración granular de rastreo, IA, Cortana, Bing y telemetría diagnóstica.</p>
         </div>
-        <button class="btn btn-primary" id="btn-save-privacy">
-          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          <span>Aplicar Cambios</span>
-        </button>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <span id="lbl-selection-count" style="font-size: 12px; color: var(--text-muted);">0 seleccionadas</span>
+          <button class="btn btn-primary" id="btn-save-privacy">
+            <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <span>Aplicar Cambios</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="filter-bar">
+        <button class="filter-tab active" data-category="all">Todos</button>
+        <button class="filter-tab" data-category="privacy">Privacidad</button>
+        <button class="filter-tab" data-category="telemetry">Telemetría</button>
+        <button class="filter-tab" data-category="latency">Rendimiento</button>
+        <button class="filter-tab" data-category="security_enhancement">Seguridad</button>
       </div>
 
       <div class="tweaks-container" id="privacy-tweaks-list">
@@ -252,7 +271,7 @@
           <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
             Elimina únicamente archivos temporales de más de 24 horas de antigüedad que no estén siendo utilizados por ninguna aplicación activa.
           </p>
-          <div style="font-size: 22px; font-weight: 700; color: var(--accent-emerald); margin-bottom: 16px;" id="clean-status">
+          <div style="font-size: 20px; font-weight: 700; color: var(--accent-emerald); margin-bottom: 16px;" id="clean-status">
             Listo para analizar
           </div>
           <button class="btn btn-primary" id="btn-run-cleaner">
@@ -266,11 +285,15 @@
             <span>Almacén de Componentes WinSxS</span>
           </div>
           <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
-            Reduce el almacén de componentes del sistema mediante el comando oficial seguro de DISM, descartando versiones obsoletas de parches previos.
+            Compacta y purga componentes obsoletos mediante el motor oficial de DISM, recuperando espacio consumido por parches antiguos.
           </p>
-          <div style="font-size: 12px; color: var(--text-dim); background: var(--bg-surface-elevated); padding: 10px; border-radius: 6px; font-family: monospace;">
-            Dism.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase
+          <div style="font-size: 13px; color: var(--accent-cyan); margin-bottom: 16px; font-weight: 600;" id="dism-status">
+            Listo para iniciar proceso DISM
           </div>
+          <button class="btn btn-secondary" id="btn-run-dism">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Ejecutar Limpieza WinSxS</span>
+          </button>
         </div>
       </div>
     </section>
@@ -280,7 +303,7 @@
       <div class="view-header">
         <div class="view-title-group">
           <h1>Auditoría de Servicios SCM</h1>
-          <p>Estado en tiempo real de los servicios del sistema.</p>
+          <p>Estado en tiempo real de los servicios del sistema y tareas de telemetría.</p>
         </div>
       </div>
       <div class="tweaks-container" id="services-list">
@@ -295,6 +318,10 @@
           <h1>Diario de Transacciones y Rollback</h1>
           <p>Historial verificado criptográficamente con reversión atómica en 1-clic.</p>
         </div>
+        <button class="btn btn-secondary" id="btn-refresh-rollback">
+          <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <span>Refrescar Historial</span>
+        </button>
       </div>
       <div class="timeline" id="rollback-list">
         <div style="font-size: 13px; color: var(--text-muted); padding: 12px 0;">
