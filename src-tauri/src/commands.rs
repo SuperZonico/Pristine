@@ -266,3 +266,128 @@ pub fn request_elevation() -> bool {
         true
     }
 }
+
+#[tauri::command]
+pub fn get_installed_apps() -> Vec<pristine_winapi::InstalledApp> {
+    #[cfg(target_os = "windows")]
+    {
+        pristine_winapi::get_installed_apps()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Vec::new()
+    }
+}
+
+#[tauri::command]
+pub fn uninstall_app(app_id: String, is_uwp: bool, uninstall_cmd: String) -> OperationResult {
+    #[cfg(target_os = "windows")]
+    {
+        match pristine_winapi::uninstall_application(&app_id, is_uwp, &uninstall_cmd) {
+            Ok(msg) => OperationResult {
+                success: true,
+                message: msg,
+            },
+            Err(e) => OperationResult {
+                success: false,
+                message: e.to_string(),
+            },
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        OperationResult {
+            success: true,
+            message: "Simulación de desinstalación en entorno no Windows.".to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn flush_dns() -> OperationResult {
+    #[cfg(target_os = "windows")]
+    {
+        match pristine_winapi::flush_dns_cache() {
+            Ok(msg) => OperationResult {
+                success: true,
+                message: msg,
+            },
+            Err(e) => OperationResult {
+                success: false,
+                message: e.to_string(),
+            },
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        OperationResult {
+            success: true,
+            message: "Caché DNS simulada purgada.".to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn get_hosts_shield_status() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        pristine_winapi::is_hosts_shield_active()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        false
+    }
+}
+
+#[tauri::command]
+pub fn toggle_hosts_shield(enable: bool) -> OperationResult {
+    #[cfg(target_os = "windows")]
+    {
+        match pristine_winapi::toggle_hosts_shield(enable) {
+            Ok(active) => OperationResult {
+                success: true,
+                message: if active {
+                    "Escudo de telemetría hosts activado (dominios redirigidos a 0.0.0.0)."
+                        .to_string()
+                } else {
+                    "Escudo de telemetría hosts desactivado.".to_string()
+                },
+            },
+            Err(e) => OperationResult {
+                success: false,
+                message: e.to_string(),
+            },
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        OperationResult {
+            success: true,
+            message: "Estado de escudo hosts simulado.".to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn restart_windows_explorer() -> OperationResult {
+    #[cfg(target_os = "windows")]
+    {
+        match pristine_winapi::restart_windows_explorer() {
+            Ok(()) => OperationResult {
+                success: true,
+                message: "Explorador de Windows reiniciado exitosamente.".to_string(),
+            },
+            Err(e) => OperationResult {
+                success: false,
+                message: e.to_string(),
+            },
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        OperationResult {
+            success: true,
+            message: "Simulación de reinicio de explorador.".to_string(),
+        }
+    }
+}

@@ -87,6 +87,15 @@
         <span>Servicios</span>
       </div>
 
+      <div class="nav-item" data-target="view-apps">
+        <svg viewBox="0 0 24 24">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+        <span>Desinstalador</span>
+      </div>
+
       <div class="nav-item" data-target="view-rollback">
         <svg viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="10"/>
@@ -319,6 +328,41 @@
             <span>Ejecutar Limpieza WinSxS</span>
           </button>
         </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Herramientas Rápidas de Red y Shell</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
+            Purga el resolver DNS local para eliminar historiales de conexión o reinicia el explorador de Windows para refrescar cambios de menú y barra.
+          </p>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" id="btn-flush-dns" title="Ejecuta ipconfig /flushdns para limpiar la caché DNS">
+              <svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07l14.14-14.14"/></svg>
+              <span>Purgar Caché DNS</span>
+            </button>
+            <button class="btn btn-secondary" id="btn-restart-explorer" title="Reinicia explorer.exe limpiamente">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Reiniciar Explorador</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Escudo DNS Hosts (Sinkhole 0.0.0.0)</span>
+            <label class="switch">
+              <input type="checkbox" id="toggle-hosts-shield">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+            Redirige más de 40 dominios de telemetría y diagnósticos de Microsoft directamente a <code>0.0.0.0</code> en tu archivo hosts local. Las conexiones mueren en tu propia tarjeta sin salir a Internet.
+          </p>
+          <div style="font-size: 12.5px; font-weight: 600; color: var(--text-dim);" id="hosts-shield-status">
+            Verificando estado del archivo hosts...
+          </div>
+        </div>
       </div>
     </section>
 
@@ -335,7 +379,45 @@
       </div>
     </section>
 
-    <!-- VIEW 5: ROLLBACK JOURNAL -->
+    <!-- VIEW 5: DESINSTALADOR DE SOFTWARE Y BLOATWARE -->
+    <section class="view-section" id="view-apps">
+      <div class="view-header">
+        <div class="view-title-group">
+          <h1>Desinstalador de Software y Bloatware</h1>
+          <p>Eliminación limpia y segura de aplicaciones Win32 y paquetes UWP de Windows 11 sin dejar residuos.</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" id="btn-refresh-apps">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span>Actualizar Lista</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- App Search & Filter Bar -->
+      <div class="apps-controls-bar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="input-search-apps" placeholder="Buscar programas instalados o bloatware..." autocomplete="off">
+        </div>
+        <div class="filter-bar" style="margin: 0;">
+          <button class="filter-tab active" data-app-filter="all">Todos (<span id="count-all-apps">0</span>)</button>
+          <button class="filter-tab" data-app-filter="bloatware">Bloatware Sugerido (<span id="count-bloatware-apps">0</span>)</button>
+          <button class="filter-tab" data-app-filter="user">Apps de Usuario (<span id="count-user-apps">0</span>)</button>
+          <button class="filter-tab" data-app-filter="system">Sistema Protegido (<span id="count-system-apps">0</span>)</button>
+        </div>
+      </div>
+
+      <div class="apps-container">
+        <div class="apps-list" id="apps-list">
+          <div style="font-size: 13px; color: var(--text-muted); padding: 30px 0; text-align: center;">
+            Cargando inventario de programas y aplicaciones UWP...
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 6: ROLLBACK JOURNAL -->
     <section class="view-section" id="view-rollback">
       <div class="view-header">
         <div class="view-title-group">

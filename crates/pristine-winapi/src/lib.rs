@@ -9,16 +9,22 @@
  */
 
 pub mod error;
+pub mod network;
 pub mod registry;
 pub mod security;
 pub mod services;
 pub mod tasks;
+pub mod uninstaller;
 
 pub use error::WinApiError;
+pub use network::{
+    flush_dns_cache, is_hosts_shield_active, restart_windows_explorer, toggle_hosts_shield,
+};
 pub use registry::{delete_registry_value, read_registry_value, write_registry_value, SafeRegKey};
 pub use security::{is_process_elevated, relaunch_elevated};
 pub use services::{configure_service, query_service, ServiceStatusInfo};
 pub use tasks::{configure_task, query_task_enabled};
+pub use uninstaller::{get_installed_apps, uninstall_application, InstalledApp};
 
 #[cfg(test)]
 mod tests {

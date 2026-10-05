@@ -19,6 +19,10 @@
     selectedCategory: 'all',
     themeMode: 'dark', // 'dark', 'light', 'auto'
     isElevated: false,
+    apps: [],
+    selectedAppFilter: 'all',
+    appSearchQuery: '',
+    hostsShieldActive: false,
   };
 
   // Safe Tauri Invoke Wrapper with Browser Fallback
@@ -173,6 +177,83 @@
 
     if (cmd === 'request_elevation') {
       return true;
+    }
+
+    if (cmd === 'get_installed_apps') {
+      return [
+        {
+          id: 'Microsoft.BingNews_8wekyb3d8bbwe',
+          name: 'Noticias de Microsoft',
+          publisher: 'Microsoft Corporation',
+          version: '4.54.12002.0',
+          install_date: 'UWP Package',
+          estimated_size_mb: 48,
+          uninstall_cmd: '',
+          quiet_uninstall_cmd: null,
+          is_uwp: true,
+          is_system_component: false,
+          category: 'bloatware'
+        },
+        {
+          id: 'Microsoft.MicrosoftSolitaireCollection_8wekyb3d8bbwe',
+          name: 'Colección de Solitario',
+          publisher: 'Microsoft Studios',
+          version: '4.17.1120.0',
+          install_date: 'UWP Package',
+          estimated_size_mb: 64,
+          uninstall_cmd: '',
+          quiet_uninstall_cmd: null,
+          is_uwp: true,
+          is_system_component: false,
+          category: 'bloatware'
+        },
+        {
+          id: 'Google Chrome',
+          name: 'Google Chrome',
+          publisher: 'Google LLC',
+          version: '129.0.6668.90',
+          install_date: '20240920',
+          estimated_size_mb: 285,
+          uninstall_cmd: 'MsiExec.exe /X{...}',
+          quiet_uninstall_cmd: null,
+          is_uwp: false,
+          is_system_component: false,
+          category: 'user'
+        },
+        {
+          id: 'Microsoft Visual C++ 2015-2022 Redistributable (x64)',
+          name: 'Microsoft Visual C++ 2015-2022 Redistributable (x64)',
+          publisher: 'Microsoft Corporation',
+          version: '14.40.33810',
+          install_date: '20240815',
+          estimated_size_mb: 32,
+          uninstall_cmd: '',
+          quiet_uninstall_cmd: null,
+          is_uwp: false,
+          is_system_component: true,
+          category: 'system'
+        }
+      ];
+    }
+
+    if (cmd === 'flush_dns') {
+      return { success: true, message: 'Caché del resolver DNS purgada exitosamente.' };
+    }
+
+    if (cmd === 'get_hosts_shield_status') {
+      return false;
+    }
+
+    if (cmd === 'toggle_hosts_shield') {
+      return { success: true, message: args.enable ? 'Escudo hosts activado (0.0.0.0 sinkhole).' : 'Escudo hosts desactivado.' };
+    }
+
+    if (cmd === 'restart_windows_explorer') {
+      return { success: true, message: 'Explorador de Windows reiniciado exitosamente.' };
+    }
+
+    if (cmd === 'uninstall_app') {
+      return { success: true, message: 'Aplicación desinstalada exitosamente.' };
     }
 
     return null;
@@ -549,6 +630,176 @@
     }
   }
 
+  // ============================================================================
+  // Software Uninstaller & Bloatware Remover Logic
+  // ============================================================================
+  async function loadInstalledApps() {
+    const listEl = document.getElementById('apps-list');
+    if (!listEl) return;
+
+    try {
+      const apps = await invokeNative('get_installed_apps');
+      if (Array.isArray(apps)) {
+        state.apps = apps;
+
+        // Update count badges
+        const countAll = document.getElementById('count-all-apps');
+        const countBloat = document.getElementById('count-bloatware-apps');
+        const countUser = document.getElementById('count-user-apps');
+        const countSystem = document.getElementById('count-system-apps');
+
+        if (countAll) countAll.textContent = apps.length;
+        if (countBloat) countBloat.textContent = apps.filter(a => a.category === 'bloatware').length;
+        if (countUser) countUser.textContent = apps.filter(a => a.category === 'user').length;
+        if (countSystem) countSystem.textContent = apps.filter(a => a.category === 'system').length;
+
+        renderApps();
+      }
+    } catch (err) {
+      console.error('Error loading installed apps:', err);
+      listEl.innerHTML = `
+        <div style="font-size: 13px; color: var(--accent-rose); padding: 24px 0; text-align: center;">
+          Error al obtener inventario de programas: ${err}
+        </div>
+      `;
+    }
+  }
+
+  function renderApps() {
+    const listEl = document.getElementById('apps-list');
+    if (!listEl) return;
+
+    listEl.innerHTML = '';
+
+    const filter = state.selectedAppFilter;
+    const query = state.appSearchQuery.toLowerCase().trim();
+
+    const filtered = state.apps.filter(app => {
+      const matchesFilter = filter === 'all' || app.category === filter;
+      const matchesQuery =
+        !query ||
+        app.name.toLowerCase().includes(query) ||
+        app.publisher.toLowerCase().includes(query) ||
+        app.id.toLowerCase().includes(query);
+      return matchesFilter && matchesQuery;
+    });
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `
+        <div style="font-size: 13px; color: var(--text-muted); padding: 30px 0; text-align: center;">
+          No se encontraron aplicaciones que coincidan con los criterios de búsqueda.
+        </div>
+      `;
+      return;
+    }
+
+    filtered.forEach(app => {
+      const card = document.createElement('div');
+      card.className = 'app-card';
+
+      const badgeClass = app.category === 'bloatware' ? 'bloatware' : app.category === 'system' ? 'system' : 'user';
+      const badgeText = app.category === 'bloatware' ? 'Bloatware' : app.category === 'system' ? 'Sistema' : 'Usuario';
+      const isSystem = app.category === 'system';
+
+      const sizeStr = app.estimated_size_mb > 0 ? `${app.estimated_size_mb} MB` : (app.is_uwp ? 'UWP App' : 'Tamaño N/D');
+
+      card.innerHTML = `
+        <div class="app-info">
+          <div class="app-name-row">
+            <span class="app-name">${app.name}</span>
+            <span class="app-badge ${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="app-meta">
+            <span>${app.publisher}</span>
+            <span>&bull;</span>
+            <span>v${app.version}</span>
+            <span>&bull;</span>
+            <span>${sizeStr}</span>
+          </div>
+        </div>
+        <div>
+          ${
+            isSystem
+              ? `<button class="btn btn-secondary btn-uninstall" disabled title="Componente protegido del sistema">Protegido</button>`
+              : `<button class="btn btn-uninstall btn-danger btn-uninstall-action" data-id="${app.id}">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <span>Desinstalar</span>
+                </button>`
+          }
+        </div>
+      `;
+
+      const btnUninstall = card.querySelector('.btn-uninstall-action');
+      if (btnUninstall) {
+        btnUninstall.addEventListener('click', () => {
+          if (!state.isElevated) {
+            promptElevation('Desinstalar aplicaciones del sistema requiere permisos de Administrador.<br><br>¿Deseas reiniciar Pristine como Administrador?');
+            return;
+          }
+
+          showModal({
+            title: `¿Desinstalar ${app.name}?`,
+            message: `Estás a punto de desinstalar <strong>${app.name}</strong> (${app.version}) de <em>${app.publisher}</em>.<br><br>¿Deseas proceder con la eliminación segura?`,
+            type: app.category === 'bloatware' ? 'info' : 'warning',
+            confirmText: 'Desinstalar Ahora',
+            cancelText: 'Cancelar',
+            onConfirm: async () => {
+              try {
+                const res = await invokeNative('uninstall_app', {
+                  appId: app.id,
+                  isUwp: app.is_uwp,
+                  uninstallCmd: app.uninstall_cmd
+                });
+
+                showModal({
+                  title: res.success ? 'Desinstalación Finalizada' : 'Aviso',
+                  message: res.message || 'Proceso completado.',
+                  type: res.success ? 'info' : 'warning'
+                });
+
+                await loadInstalledApps();
+              } catch (err) {
+                showModal({
+                  title: 'Error al Desinstalar',
+                  message: 'Fallo al desinstalar la aplicación: ' + err,
+                  type: 'error'
+                });
+              }
+            }
+          });
+        });
+      }
+
+      listEl.appendChild(card);
+    });
+  }
+
+  // ============================================================================
+  // Hosts Telemetry Shield Status
+  // ============================================================================
+  async function checkHostsShieldStatus() {
+    try {
+      const active = await invokeNative('get_hosts_shield_status');
+      state.hostsShieldActive = !!active;
+
+      const checkbox = document.getElementById('toggle-hosts-shield');
+      const statusLabel = document.getElementById('hosts-shield-status');
+
+      if (checkbox) checkbox.checked = state.hostsShieldActive;
+      if (statusLabel) {
+        if (state.hostsShieldActive) {
+          statusLabel.textContent = 'ACTIVO: 40+ dominios de telemetría redirigidos a 0.0.0.0 localmente.';
+          statusLabel.style.color = 'var(--accent-emerald)';
+        } else {
+          statusLabel.textContent = 'Inactivo: Las peticiones DNS se resuelven normalmente.';
+          statusLabel.style.color = 'var(--text-muted)';
+        }
+      }
+    } catch (e) {
+      console.warn('Could not check hosts shield status:', e);
+    }
+  }
+
   // Setup Action Handlers
   function setupActions() {
     // Privilege Elevation Badge & Banner Handlers
@@ -728,6 +979,113 @@
         btnRefreshRollback.disabled = false;
       });
     }
+
+    // Flush DNS Resolver Cache Button
+    const btnFlushDns = document.getElementById('btn-flush-dns');
+    if (btnFlushDns) {
+      btnFlushDns.addEventListener('click', async () => {
+        btnFlushDns.disabled = true;
+        try {
+          const res = await invokeNative('flush_dns');
+          showModal({
+            title: 'Caché DNS Purgada',
+            message: res.message || 'La caché de resolución DNS de Windows ha sido vaciada con éxito.',
+            type: 'info'
+          });
+        } catch (err) {
+          showModal({
+            title: 'Error de Red',
+            message: 'Error al purgar la caché DNS: ' + err,
+            type: 'error'
+          });
+        } finally {
+          btnFlushDns.disabled = false;
+        }
+      });
+    }
+
+    // Restart Windows Explorer Button
+    const btnRestartExp = document.getElementById('btn-restart-explorer');
+    if (btnRestartExp) {
+      btnRestartExp.addEventListener('click', async () => {
+        btnRestartExp.disabled = true;
+        try {
+          await invokeNative('restart_windows_explorer');
+          showModal({
+            title: 'Explorador Reiniciado',
+            message: 'El proceso explorer.exe se ha reiniciado correctamente. La barra de tareas y el menú de inicio han sido refrescados.',
+            type: 'info'
+          });
+        } catch (err) {
+          showModal({
+            title: 'Error de Shell',
+            message: 'Error al reiniciar explorer.exe: ' + err,
+            type: 'error'
+          });
+        } finally {
+          btnRestartExp.disabled = false;
+        }
+      });
+    }
+
+    // Hosts Telemetry Shield Toggle
+    const toggleHosts = document.getElementById('toggle-hosts-shield');
+    if (toggleHosts) {
+      toggleHosts.addEventListener('change', async () => {
+        if (!state.isElevated) {
+          toggleHosts.checked = !toggleHosts.checked;
+          promptElevation('Modificar el archivo hosts de Windows requiere permisos de Administrador.<br><br>¿Deseas reiniciar Pristine como Administrador?');
+          return;
+        }
+
+        const target = toggleHosts.checked;
+        try {
+          const res = await invokeNative('toggle_hosts_shield', { enable: target });
+          showModal({
+            title: target ? 'Escudo Hosts Activado' : 'Escudo Hosts Desactivado',
+            message: res.message || 'Archivo hosts actualizado y caché DNS purgada.',
+            type: 'info'
+          });
+          await checkHostsShieldStatus();
+        } catch (err) {
+          toggleHosts.checked = !target;
+          showModal({
+            title: 'Error en Archivo Hosts',
+            message: 'Error al modificar archivo hosts: ' + err,
+            type: 'error'
+          });
+        }
+      });
+    }
+
+    // Refresh Installed Apps Button
+    const btnRefreshApps = document.getElementById('btn-refresh-apps');
+    if (btnRefreshApps) {
+      btnRefreshApps.addEventListener('click', async () => {
+        btnRefreshApps.disabled = true;
+        await loadInstalledApps();
+        btnRefreshApps.disabled = false;
+      });
+    }
+
+    // Apps Real-time Search Input
+    const inputSearchApps = document.getElementById('input-search-apps');
+    if (inputSearchApps) {
+      inputSearchApps.addEventListener('input', e => {
+        state.appSearchQuery = e.target.value;
+        renderApps();
+      });
+    }
+
+    // Apps Filter Tabs
+    document.querySelectorAll('[data-app-filter]').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('[data-app-filter]').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        state.selectedAppFilter = tab.getAttribute('data-app-filter') || 'all';
+        renderApps();
+      });
+    });
   }
 
   // Render Rollback Timeline
@@ -802,13 +1160,15 @@
     setupCategoryFilters();
     setupActions();
     await updatePrivilegeState();
+    await checkHostsShieldStatus();
     loadData();
+    loadInstalledApps();
 
     // Start live metrics loop
     pollHardwareMetrics();
     setInterval(pollHardwareMetrics, 1500);
 
-    invokeNative('frontend_log', { msg: 'DOM, category filters, privilege state and handlers initialized successfully' }).catch(() => {});
+    invokeNative('frontend_log', { msg: 'DOM, category filters, apps inventory, privilege state and handlers initialized successfully' }).catch(() => {});
   }
 
   if (document.readyState === 'loading') {

@@ -25,6 +25,7 @@ Toda la documentación técnica, arquitectónica y operativa del proyecto se enc
 | **[06. Sistema de Diseño y UX](file:///c:/Users/luist/Desktop/CODE/Apps/Pristine/docs/06_SISTEMA_DE_DISENO_Y_UX.md)** | Lenguaje visual Fluent/Mica, sincronización automática de paleta con DWM, telemetría visual en tiempo real, 60/120 FPS y accesibilidad. |
 | **[07. Plan de Fases y Roadmap](file:///c:/Users/luist/Desktop/CODE/Apps/Pristine/docs/07_PLAN_DE_FASE_Y_ROADMAP.md)** | Roadmap exhaustivo por sprints: desde la creación de la base en Rust hasta la distribución segura y verificación continua. |
 | **[08. Estándares de Código y GitHub](file:///c:/Users/luist/Desktop/CODE/Apps/Pristine/docs/08_ESTANDARES_CODIGO_Y_GITHUB.md)** | Cabeceras profesionales de código, autoría oficial de SuperZonico, iconos vectoriales SVG hechos a mano (cero emojis en UI) y checklist público. |
+| **[10. Desinstalador de Software y Bloatware](file:///c:/Users/luist/Desktop/CODE/Apps/Pristine/docs/10_DESINSTALADOR_DE_SOFTWARE_Y_BLOATWARE.md)** | Gestión y desinstalación limpia de aplicaciones Win32 y UWP (Bloatware de Windows 11), purgado de caché DNS y escudo de red local vía hosts. |
 
 ---
 

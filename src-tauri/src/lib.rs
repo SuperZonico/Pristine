@@ -28,6 +28,12 @@ pub fn run() {
             create_system_restore_point,
             check_elevation,
             request_elevation,
+            get_installed_apps,
+            uninstall_app,
+            flush_dns,
+            get_hosts_shield_status,
+            toggle_hosts_shield,
+            restart_windows_explorer,
             frontend_log,
         ])
         .setup(|app| {

@@ -16,5 +16,7 @@ license.workspace = true
 [dependencies]
 pristine-core = { workspace = true }
 windows = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
