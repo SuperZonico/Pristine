@@ -10,7 +10,7 @@
  * ============================================================================
  */
 
-# 💎 08. Estándares de Código, Iconografía Vectorial y Preparación GitHub
+# 08. Estándares de Código, Iconografía Vectorial y Preparación GitHub
 
 > *"Código impecable que hable por sí mismo: profesional, limpio, sin rastro de automatismos burdos y listo para ser admirado por la comunidad open-source mundial."*
 

@@ -24,7 +24,10 @@ Every modification is transparent, granular, and backed by an atomic transaction
 - **Deterministic 1-Click Rollback**: Binary-exact snapshots captured before every mutation allow reverting single sessions or returning to factory baseline instantly.
 - **Ultra-Low Resource Footprint**: Zero garbage collection pauses, instant boot, and ~35 MB idle RAM utilization powered by Tauri v2 and native WebView2.
 - **Precision Iconography & Visuals**: 100% handcrafted mathematical vector SVG assets. Seamless automatic synchronization with Windows 11 Light/Dark theme schedules.
-- **Smart Non-Destructive Cleaning**: Temporary file cleaner strictly filters files older than 24 hours without active file descriptor locks.
+- **Smart Non-Destructive Cleaning**: Temporary file cleaner strictly filters files older than 24 hours without active file descriptor locks, plus WinSxS component store pruning via DISM.
+- **Large & Stale Files Analyzer**: Identifies heavy, cold files (>100MB, 1GB+) untouched for months across user libraries and temp storage, with safe Windows Recycle Bin (`SHFileOperationW` with `FOF_ALLOWUNDO`) integration.
+- **Clean Software & Bloatware Uninstaller**: Discovers Win32 programs and UWP apps, uninstalls without background bloat, and performs deep orphan residual scanning across AppData, ProgramData, and Registry with strict token matching.
+- **DNS Telemetry Sinkhole Shield**: One-click local redirection of 40+ Microsoft diagnostic telemetry endpoints to `0.0.0.0` inside `C:\Windows\System32\drivers\etc\hosts` with automatic DNS resolver flush.
 
 ---
 
@@ -42,6 +45,7 @@ Comprehensive architecture, research, and threat modeling documents are located 
 | **[06. Design System & UX](docs/06_SISTEMA_DE_DISENO_Y_UX.md)** | Windows 11 Fluent/Mica visual specs, dark/light dynamic tokens, and UI layout. |
 | **[07. Phase Plan & Testing Roadmap](docs/07_PLAN_DE_FASE_Y_ROADMAP.md)** | Sprints, verification matrix across Windows 11 22H2/23H2/24H2 builds. |
 | **[08. Code Standards & GitHub Prep](docs/08_ESTANDARES_CODIGO_Y_GITHUB.md)** | File headers, author attribution, and vector iconography standards. |
+| **[10. Software & Bloatware Uninstaller](docs/10_DESINSTALADOR_DE_SOFTWARE_Y_BLOATWARE.md)** | Win32 & UWP uninstaller, deep residual cleaner, and DNS telemetry sinkhole. |
 
 ---
 

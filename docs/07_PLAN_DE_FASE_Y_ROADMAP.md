@@ -1,4 +1,4 @@
-# 🗺️ 07. Plan de Fases, Roadmap de Desarrollo y Testing
+# 07. Plan de Fases, Roadmap de Desarrollo y Testing
 
 > *"El éxito de una obra maestra reside en la disciplina del proceso: paso a paso, sin fisuras, verificando cada línea antes de dar el siguiente paso."*
 

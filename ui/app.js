@@ -974,6 +974,158 @@
         renderApps();
       });
     });
+
+    // Large & Stale Files Scan Button
+    const btnScanStale = document.getElementById('btn-scan-stale-files');
+    if (btnScanStale) {
+      btnScanStale.addEventListener('click', scanLargeStaleFiles);
+    }
+  }
+
+  // ============================================================================
+  // Large & Stale Files Analyzer Engine
+  // ============================================================================
+  async function scanLargeStaleFiles() {
+    const btnScan = document.getElementById('btn-scan-stale-files');
+    const elPlaceholder = document.getElementById('stale-files-placeholder');
+    const elList = document.getElementById('stale-files-list');
+    const elCount = document.getElementById('stale-files-count');
+    const minSize = parseInt(document.getElementById('stale-min-size')?.value || '1024', 10);
+    const minDays = parseInt(document.getElementById('stale-min-days')?.value || '60', 10);
+
+    if (btnScan) btnScan.disabled = true;
+    if (elPlaceholder) {
+      elPlaceholder.style.display = 'block';
+      elPlaceholder.innerHTML = `
+        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none" stroke-width="2" style="animation: spin 1.5s linear infinite; margin-bottom: 12px; display: inline-block;">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg><br>
+        Escaneando carpetas de usuario y temporales en busca de archivos pesados y sin uso...
+      `;
+    }
+    if (elList) elList.style.display = 'none';
+
+    try {
+      const files = await invokeNative('scan_large_stale_files', {
+        minSizeMb: minSize,
+        minDaysStale: minDays,
+        customPath: null
+      });
+
+      renderStaleFiles(Array.isArray(files) ? files : []);
+    } catch (err) {
+      console.error('Error scanning stale files:', err);
+      if (elPlaceholder) {
+        elPlaceholder.style.display = 'block';
+        elPlaceholder.textContent = 'Error al escanear archivos: ' + err;
+      }
+    } finally {
+      if (btnScan) btnScan.disabled = false;
+    }
+  }
+
+  function renderStaleFiles(files) {
+    const elPlaceholder = document.getElementById('stale-files-placeholder');
+    const elList = document.getElementById('stale-files-list');
+    const elCount = document.getElementById('stale-files-count');
+
+    if (elCount) {
+      const totalBytes = files.reduce((acc, f) => acc + (f.size_bytes || 0), 0);
+      const totalGb = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
+      elCount.textContent = `${files.length} archivos (${totalGb} GB)`;
+    }
+
+    if (files.length === 0) {
+      if (elPlaceholder) {
+        elPlaceholder.style.display = 'block';
+        elPlaceholder.textContent = '¡Excelente! No se encontraron archivos pesados obsoletos con los filtros seleccionados.';
+      }
+      if (elList) elList.style.display = 'none';
+      return;
+    }
+
+    if (elPlaceholder) elPlaceholder.style.display = 'none';
+    if (!elList) return;
+
+    elList.style.display = 'flex';
+    elList.innerHTML = '';
+
+    files.forEach(file => {
+      const item = document.createElement('div');
+      item.className = 'stale-file-item';
+
+      const daysAgo = Math.max(file.last_accessed_days_ago || 0, file.last_modified_days_ago || 0);
+
+      item.innerHTML = `
+        <div class="stale-file-left">
+          <div class="stale-file-icon">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div class="stale-file-info">
+            <span class="stale-file-name" title="${escapeHtml(file.file_name)}">${escapeHtml(file.file_name)}</span>
+            <span class="stale-file-path" title="${escapeHtml(file.path)}">${escapeHtml(file.path)}</span>
+          </div>
+        </div>
+        <div class="stale-file-badges">
+          <span class="badge-stale-size">${file.size_formatted}</span>
+          <span class="badge-stale-age">Sin uso: ${daysAgo} días</span>
+        </div>
+        <div class="stale-file-actions">
+          <button class="btn btn-secondary btn-reveal-file" title="Abrir ubicación en el Explorador de Windows">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span>Ubicación</span>
+          </button>
+          <button class="btn btn-danger btn-recycle-file" title="Mover este archivo pesado a la Papelera de Reciclaje">
+            <svg viewBox="0 0 24 24" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Papelera</span>
+          </button>
+        </div>
+      `;
+
+      item.querySelector('.btn-reveal-file').addEventListener('click', async () => {
+        try {
+          await invokeNative('reveal_file_in_explorer', { path: file.path });
+        } catch (err) {
+          showModal({
+            title: 'Error de Explorador',
+            message: 'No se pudo abrir la ubicación del archivo: ' + err,
+            type: 'error'
+          });
+        }
+      });
+
+      item.querySelector('.btn-recycle-file').addEventListener('click', () => {
+        showModal({
+          title: '¿Mover a la Papelera de Reciclaje?',
+          message: `¿Deseas enviar el archivo <strong>${escapeHtml(file.file_name)}</strong> (${file.size_formatted}) a la Papelera de Reciclaje?<br><br><em>Podrás restaurarlo en cualquier momento desde la Papelera de Windows si lo necesitas.</em>`,
+          type: 'warning',
+          confirmText: 'Mover a Papelera',
+          cancelText: 'Cancelar',
+          onConfirm: async () => {
+            try {
+              const res = await invokeNative('delete_stale_file', {
+                path: file.path,
+                toRecycleBin: true
+              });
+              showModal({
+                title: 'Archivo en Papelera',
+                message: res.message || 'Archivo movido a la Papelera de Reciclaje.',
+                type: 'info'
+              });
+              scanLargeStaleFiles();
+            } catch (err) {
+              showModal({
+                title: 'Error al Eliminar',
+                message: 'No se pudo enviar el archivo a la papelera: ' + err,
+                type: 'error'
+              });
+            }
+          }
+        });
+      });
+
+      elList.appendChild(item);
+    });
   }
 
   // ============================================================================

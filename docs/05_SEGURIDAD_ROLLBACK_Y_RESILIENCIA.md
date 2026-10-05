@@ -1,4 +1,4 @@
-# 🛡️ 05. Seguridad, Rollback Atómico y Resiliencia Extrema
+# 05. Seguridad, Rollback Atómico y Resiliencia Extrema
 
 > *"El mejor sistema de seguridad no es el que promete no fallar jamás, sino el que cuenta con un plan de rescate infalible y blindado ante cualquier imprevisto."*
 

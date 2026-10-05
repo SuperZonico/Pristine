@@ -1,4 +1,4 @@
-# 🌹 01. Visión y Filosofía de Pristine
+# 01. Visión y Filosofía de Pristine
 
 > *"La verdadera privacidad no se impone con un mazo que rompe el sistema; se esculpe con bisturí de precisión milimétrica."*
 
@@ -70,6 +70,6 @@ Para simplificar la vida del usuario sin quitarle control, Pristine estructura l
 
 | Perfil | Descripción | Indicado Para |
 | :--- | :--- | :--- |
-| **🛡️ Escudo Puro (Safe / Default)** | Elimina telemetría diagnóstica, telemetría de Edge, anuncios del menú inicio, tracking de ID de publicidad y servicios de feedback. No afecta impresoras, Xbox, Bluetooth ni actualizaciones. | Usuarios cotidianos, entornos de trabajo, máxima compatibilidad. |
-| **⚡ Potencia & Privacidad (Balanced)** | Todo lo anterior más: desactivación de Copilot/Recall, optimización de Delivery Optimization (P2P), mitigación de indexación pesada y telemetría de Cortana/Bing. | Desarrolladores, creadores de contenido, entusiastas de la eficiencia. |
-| **🎯 Modo Competitivo / Ultra (Isolated)** | Desactivación de telemetría agresiva, mitigación de jitter DPC, optimización de latencia de red para juegos, suspensión de servicios de diagnóstico en segundo plano. | Gamers competitivos y estaciones de producción de audio/video. |
+| **Escudo Puro (Safe / Default)** | Elimina telemetría diagnóstica, telemetría de Edge, anuncios del menú inicio, tracking de ID de publicidad y servicios de feedback. No afecta impresoras, Xbox, Bluetooth ni actualizaciones. | Usuarios cotidianos, entornos de trabajo, máxima compatibilidad. |
+| **Potencia & Privacidad (Balanced)** | Todo lo anterior más: desactivación de Copilot/Recall, optimización de Delivery Optimization (P2P), mitigación de indexación pesada y telemetría de Cortana/Bing. | Desarrolladores, creadores de contenido, entusiastas de la eficiencia. |
+| **Modo Competitivo / Ultra (Isolated)** | Desactivación de telemetría agresiva, mitigación de jitter DPC, optimización de latencia de red para juegos, suspensión de servicios de diagnóstico en segundo plano. | Gamers competitivos y estaciones de producción de audio/video. |

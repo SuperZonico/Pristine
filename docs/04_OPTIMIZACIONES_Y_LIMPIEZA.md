@@ -1,4 +1,4 @@
-# 🧹 04. Motor de Optimización, Limpieza Inteligente y Latencia
+# 04. Motor de Optimización, Limpieza Inteligente y Latencia
 
 > *"Optimizar no es vaciar carpetas a lo loco; es liberar recursos estratégicos y minimizar latencia sin sabotear las cachés útiles del sistema."*
 

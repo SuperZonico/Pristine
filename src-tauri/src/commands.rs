@@ -457,3 +457,74 @@ pub fn clean_app_residuals(paths: Vec<String>) -> OperationResult {
         }
     }
 }
+
+#[tauri::command]
+pub fn scan_large_stale_files(
+    min_size_mb: u64,
+    min_days_stale: u64,
+    custom_path: Option<String>,
+) -> Vec<pristine_winapi::LargeStaleFile> {
+    #[cfg(target_os = "windows")]
+    {
+        pristine_winapi::scan_large_stale_files(min_size_mb, min_days_stale, custom_path)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (min_size_mb, min_days_stale, custom_path);
+        Vec::new()
+    }
+}
+
+#[tauri::command]
+pub fn delete_stale_file(path: String, to_recycle_bin: bool) -> OperationResult {
+    #[cfg(target_os = "windows")]
+    {
+        match pristine_winapi::delete_file_safely(&path, to_recycle_bin) {
+            Ok(()) => OperationResult {
+                success: true,
+                message: if to_recycle_bin {
+                    "Archivo movido exitosamente a la Papelera de Reciclaje.".to_string()
+                } else {
+                    "Archivo eliminado definitivamente de forma segura.".to_string()
+                },
+            },
+            Err(e) => OperationResult {
+                success: false,
+                message: e.to_string(),
+            },
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (path, to_recycle_bin);
+        OperationResult {
+            success: true,
+            message: "Simulación de eliminación de archivo.".to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn reveal_file_in_explorer(path: String) -> OperationResult {
+    #[cfg(target_os = "windows")]
+    {
+        match pristine_winapi::reveal_in_explorer(&path) {
+            Ok(()) => OperationResult {
+                success: true,
+                message: "Ubicación abierta en el Explorador de Windows.".to_string(),
+            },
+            Err(e) => OperationResult {
+                success: false,
+                message: e.to_string(),
+            },
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = path;
+        OperationResult {
+            success: true,
+            message: "Simulación de apertura en explorador.".to_string(),
+        }
+    }
+}

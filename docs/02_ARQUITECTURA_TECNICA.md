@@ -1,4 +1,4 @@
-# ⚙️ 02. Arquitectura Técnica y Modelo de Seguridad de Pristine
+# 02. Arquitectura Técnica y Modelo de Seguridad de Pristine
 
 > *"La solidez no se negocia: cero fallas de memoria, privilegios mínimos estrictos y tolerancia cero a vulnerabilidades."*
 

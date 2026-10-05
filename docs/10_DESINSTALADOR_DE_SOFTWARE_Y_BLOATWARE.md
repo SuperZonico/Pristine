@@ -1,4 +1,4 @@
-# 📦 10. Desinstalador de Software, Bloatware y Escudo de Red
+# 10. Desinstalador de Software, Bloatware y Escudo de Red
 
 > *"A diferencia de los desinstaladores comerciales cargados de adware y procesos zombies en segundo plano, Pristine ofrece una gestión de software pura, nativa en Rust, 100% transparente y orientada a la soberanía del usuario."*
 

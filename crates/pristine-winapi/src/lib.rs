@@ -13,6 +13,7 @@ pub mod network;
 pub mod registry;
 pub mod security;
 pub mod services;
+pub mod storage;
 pub mod tasks;
 pub mod uninstaller;
 
@@ -23,6 +24,7 @@ pub use network::{
 pub use registry::{delete_registry_value, read_registry_value, write_registry_value, SafeRegKey};
 pub use security::{is_process_elevated, relaunch_elevated};
 pub use services::{configure_service, query_service, ServiceStatusInfo};
+pub use storage::{delete_file_safely, reveal_in_explorer, scan_large_stale_files, LargeStaleFile};
 pub use tasks::{configure_task, query_task_enabled};
 pub use uninstaller::{
     clean_residuals, get_installed_apps, scan_app_residuals, uninstall_application, InstalledApp,

@@ -1,4 +1,4 @@
-# 📡 03. Catálogo Exhaustivo de Telemetría y Servicios en Windows 11
+# 03. Catálogo Exhaustivo de Telemetría y Servicios en Windows 11
 
 > *"Conocer al adversario al milímetro: mapeo exhaustivo de cada sonda, cada servicio y cada tarea silenciosa que vigila a Windows 11."*
 

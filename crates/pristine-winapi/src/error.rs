@@ -29,6 +29,13 @@ pub enum WinApiError {
     #[error("Restore point creation failed: {message} (code: {code})")]
     RestorePointError { code: u32, message: String },
 
+    #[error("Storage error on '{path}': {message} (code: {code})")]
+    StorageError {
+        path: String,
+        code: u32,
+        message: String,
+    },
+
     #[error("Insufficient privileges: {0}")]
     AccessDenied(String),
 

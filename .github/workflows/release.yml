@@ -1,0 +1,70 @@
+# ==============================================================================
+# Project:      Pristine — Windows 11 Optimization & Privacy Suite
+# File:         .github/workflows/release.yml
+# Author:       SuperZonico
+# License:      MIT License
+# Purpose:      Automated release packaging and binary distribution workflow.
+# ==============================================================================
+
+name: Pristine Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build & Package Windows Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-release-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-release-cargo-
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Build Tauri Desktop Application
+        run: npx tauri build
+
+      - name: Create Release Package Archive
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-package
+          Copy-Item -Path target\release\pristine-app.exe -Destination dist-package\Pristine.exe
+          Copy-Item -Path LICENSE -Destination dist-package\LICENSE.txt
+          Copy-Item -Path README.md -Destination dist-package\README.md
+          Compress-Archive -Path dist-package\* -DestinationPath Pristine-Windows-x64.zip
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Pristine-Windows-x64.zip
+            target/release/bundle/msi/*.msi
+            target/release/bundle/nsis/*.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,4 +1,4 @@
-# ✨ 06. Sistema de Diseño, Interfaz y Experiencia de Usuario (UI/UX)
+# 06. Sistema de Diseño, Interfaz y Experiencia de Usuario (UI/UX)
 
 > *"Una herramienta técnica no tiene por qué ser tosca ni fría. Pristine está diseñada para enamorar la vista: fluida, moderna, hipnótica y adaptativa al milisegundo."*
 

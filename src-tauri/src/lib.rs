@@ -36,6 +36,9 @@ pub fn run() {
             get_hosts_shield_status,
             toggle_hosts_shield,
             restart_windows_explorer,
+            scan_large_stale_files,
+            delete_stale_file,
+            reveal_file_in_explorer,
             frontend_log,
         ])
         .setup(|app| {

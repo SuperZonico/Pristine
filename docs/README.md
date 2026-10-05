@@ -1,9 +1,9 @@
-# 💎 Pristine — The Windows 11 Privacy & Precision Optimization Suite
+# Pristine — The Windows 11 Privacy & Precision Optimization Suite
 > *"Máxima pureza para tu sistema. Cero rastreo, cero bloatware, cero compromisos de estabilidad."*
 
 ---
 
-## 🌹 Bienvenidos a Pristine
+## Bienvenidos a Pristine
 
 **Pristine** nace con una misión clara e inquebrantable: devolverle al usuario el control absoluto, la privacidad y la velocidad de su máquina con Windows 11, sin caer jamás en el error de los "debloaters" agresivos que rompen actualizaciones, componentes de Windows Store, drivers o subsistemas vitales.
 
@@ -11,7 +11,7 @@ Construida íntegramente en **Rust**, **Pristine** combina un rendimiento de ult
 
 ---
 
-## 📚 Estructura del Libro Maestro de Documentación
+## Estructura del Libro Maestro de Documentación
 
 Toda la documentación técnica, arquitectónica y operativa del proyecto se encuentra organizada de manera modular en esta carpeta:
 
@@ -29,14 +29,14 @@ Toda la documentación técnica, arquitectónica y operativa del proyecto se enc
 
 ---
 
-## 👨‍💻 Autoría y Licencia
+## Autoría y Licencia
 
 - **Arquitecto y Creador:** **SuperZonico**
 - **Licencia:** MIT License (Código abierto, auditable, reproducible).
 - **Destino:** Repositorio público oficial en GitHub.
 
 
-## 🛡️ Pilares Fundamentales de Pristine
+## Pilares Fundamentales de Pristine
 
 1. **Safety First ("Never Break Windows")**:
    - Cada ajuste es clasificado por nivel de riesgo (**Verde / Seguro**, **Amarillo / Avanzado**, **Rojo / Crítico**).
