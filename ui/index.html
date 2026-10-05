@@ -130,11 +130,35 @@
         <div class="status-dot"></div>
         <span>Motor Activo</span>
       </div>
+
+      <div class="privilege-badge unelevated" id="privilege-badge" title="Haz clic para reiniciar Pristine con privilegios de Administrador">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span id="privilege-text">Modo Estándar (Elevar)</span>
+      </div>
     </div>
   </aside>
 
   <!-- Main Content Workspace -->
   <main class="main-content">
+
+    <!-- Privilege Elevation Warning Banner (Visible only in Standard User Mode) -->
+    <div class="elevation-banner" id="elevation-banner" style="display: none;">
+      <div class="banner-left">
+        <svg viewBox="0 0 24 24" class="banner-shield-icon">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div class="banner-text">
+          <span class="banner-title">Modo Estándar (Sin Privilegios de Administrador)</span>
+          <span class="banner-desc">Para desactivar servicios de telemetría (DiagTrack) y aplicar directivas del sistema, Pristine requiere permisos de Administrador.</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-elevation-action" id="btn-banner-elevate">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Reiniciar como Administrador</span>
+      </button>
+    </div>
 
     <!-- VIEW 1: DASHBOARD -->
     <section class="view-section active" id="view-dashboard">
@@ -331,6 +355,25 @@
     </section>
 
   </main>
+
+  <!-- Pristine Custom Modal Dialog (Zero-dependency, native aesthetic) -->
+  <div class="modal-overlay" id="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-icon warning" id="modal-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="modal-title" id="modal-title">Título del Mensaje</div>
+      </div>
+      <div class="modal-body" id="modal-message">
+        Mensaje descriptivo.
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="modal-btn-cancel" style="display: none;">Cancelar</button>
+        <button class="btn btn-primary" id="modal-btn-confirm">Aceptar</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

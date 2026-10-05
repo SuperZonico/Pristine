@@ -18,6 +18,7 @@
     selectedTweakIds: new Set(),
     selectedCategory: 'all',
     themeMode: 'dark', // 'dark', 'light', 'auto'
+    isElevated: false,
   };
 
   // Safe Tauri Invoke Wrapper with Browser Fallback
@@ -166,7 +167,138 @@
       };
     }
 
+    if (cmd === 'check_elevation') {
+      return true;
+    }
+
+    if (cmd === 'request_elevation') {
+      return true;
+    }
+
     return null;
+  }
+
+  // ============================================================================
+  // Native Obsidian-Fluent Modal System (Zero native alert/confirm popups)
+  // ============================================================================
+  function showModal({
+    title,
+    message,
+    type = 'info', // 'info', 'warning', 'error'
+    confirmText = 'Aceptar',
+    cancelText = null,
+    onConfirm = null,
+    onCancel = null
+  }) {
+    const overlay = document.getElementById('modal-overlay');
+    const elTitle = document.getElementById('modal-title');
+    const elMessage = document.getElementById('modal-message');
+    const elIcon = document.getElementById('modal-icon');
+    const btnConfirm = document.getElementById('modal-btn-confirm');
+    const btnCancel = document.getElementById('modal-btn-cancel');
+
+    if (!overlay || !elTitle || !elMessage) {
+      if (cancelText) {
+        if (confirm(message.replace(/<[^>]*>/g, '')) && onConfirm) onConfirm();
+        else if (onCancel) onCancel();
+      } else {
+        alert(message.replace(/<[^>]*>/g, ''));
+        if (onConfirm) onConfirm();
+      }
+      return;
+    }
+
+    elTitle.textContent = title;
+    elMessage.innerHTML = message;
+
+    elIcon.className = `modal-icon ${type}`;
+    if (type === 'warning') {
+      elIcon.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+    } else if (type === 'error') {
+      elIcon.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+    } else {
+      elIcon.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>`;
+    }
+
+    btnConfirm.textContent = confirmText;
+    btnConfirm.onclick = () => {
+      overlay.style.display = 'none';
+      if (onConfirm) onConfirm();
+    };
+
+    if (cancelText) {
+      btnCancel.style.display = 'inline-flex';
+      btnCancel.textContent = cancelText;
+      btnCancel.onclick = () => {
+        overlay.style.display = 'none';
+        if (onCancel) onCancel();
+      };
+    } else {
+      btnCancel.style.display = 'none';
+      btnCancel.onclick = null;
+    }
+
+    overlay.style.display = 'flex';
+  }
+
+  // ============================================================================
+  // Privilege Elevation Management & Dynamic UAC Detection
+  // ============================================================================
+  async function updatePrivilegeState() {
+    try {
+      const isElevated = await invokeNative('check_elevation');
+      state.isElevated = !!isElevated;
+
+      const badge = document.getElementById('privilege-badge');
+      const badgeText = document.getElementById('privilege-text');
+      const banner = document.getElementById('elevation-banner');
+
+      if (badge && badgeText) {
+        if (state.isElevated) {
+          badge.className = 'privilege-badge elevated';
+          badge.title = 'Pristine se ejecuta con privilegios de Administrador';
+          badgeText.textContent = 'Administrador';
+          if (banner) banner.style.display = 'none';
+        } else {
+          badge.className = 'privilege-badge unelevated';
+          badge.title = 'Haz clic para reiniciar Pristine con privilegios de Administrador';
+          badgeText.textContent = 'Modo Estándar (Elevar)';
+          if (banner) banner.style.display = 'flex';
+        }
+      }
+    } catch (e) {
+      console.warn('Could not check elevation status:', e);
+    }
+  }
+
+  function promptElevation(customReason) {
+    showModal({
+      title: 'Permisos de Administrador Requeridos',
+      message:
+        customReason ||
+        'Pristine está ejecutándose en <strong>Modo Estándar</strong>. Para desactivar servicios del sistema (como <code>DiagTrack</code>) y aplicar directivas protegidas de Windows, se requieren privilegios de Administrador.<br><br>¿Deseas reiniciar Pristine como Administrador ahora mismo?',
+      type: 'warning',
+      confirmText: 'Reiniciar como Administrador',
+      cancelText: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          const success = await invokeNative('request_elevation');
+          if (!success) {
+            showModal({
+              title: 'Elevación Cancelada',
+              message: 'La solicitud de UAC fue rechazada o cancelada por el usuario.',
+              type: 'info'
+            });
+          }
+        } catch (err) {
+          showModal({
+            title: 'Error de Elevación',
+            message: 'No se pudo iniciar el proceso elevado: ' + err,
+            type: 'error'
+          });
+        }
+      }
+    });
   }
 
   // DOM Elements
@@ -419,6 +551,23 @@
 
   // Setup Action Handlers
   function setupActions() {
+    // Privilege Elevation Badge & Banner Handlers
+    const badge = document.getElementById('privilege-badge');
+    if (badge) {
+      badge.addEventListener('click', () => {
+        if (!state.isElevated) {
+          promptElevation();
+        }
+      });
+    }
+
+    const btnBannerElevate = document.getElementById('btn-banner-elevate');
+    if (btnBannerElevate) {
+      btnBannerElevate.addEventListener('click', () => {
+        promptElevation();
+      });
+    }
+
     // Quick Scan
     document.getElementById('btn-quick-scan').addEventListener('click', async () => {
       const btn = document.getElementById('btn-quick-scan');
@@ -435,6 +584,11 @@
     const btnRestorePoint = document.getElementById('btn-create-restore-point');
     if (btnRestorePoint) {
       btnRestorePoint.addEventListener('click', async () => {
+        if (!state.isElevated) {
+          promptElevation('La creación de puntos de restauración VSS de Windows requiere permisos de Administrador.<br><br>¿Deseas reiniciar Pristine como Administrador?');
+          return;
+        }
+
         btnRestorePoint.disabled = true;
         const span = btnRestorePoint.querySelector('span');
         const prevText = span.textContent;
@@ -442,9 +596,17 @@
 
         try {
           const res = await invokeNative('create_system_restore_point');
-          alert(res || 'Snapshot VSS creado exitosamente.');
+          showModal({
+            title: res.success ? 'Snapshot VSS Creado' : 'Aviso del Sistema VSS',
+            message: res.message || 'Punto de restauración del sistema creado con éxito.',
+            type: res.success ? 'info' : 'warning'
+          });
         } catch (err) {
-          alert('Error al crear punto de restauración VSS: ' + err);
+          showModal({
+            title: 'Error al Crear Snapshot',
+            message: 'Ocurrió un error al crear el punto de restauración VSS: ' + err,
+            type: 'error'
+          });
         } finally {
           btnRestorePoint.disabled = false;
           span.textContent = prevText;
@@ -465,6 +627,12 @@
 
     // Save Privacy Changes
     document.getElementById('btn-save-privacy').addEventListener('click', async () => {
+      // Check if user is in standard mode and attempting to apply tweaks
+      if (!state.isElevated) {
+        promptElevation('Pristine se encuentra en <strong>Modo Estándar</strong>. La configuración de servicios del sistema (como <code>DiagTrack</code>) y directivas de privacidad de Windows requiere permisos de Administrador.<br><br>¿Deseas reiniciar Pristine como Administrador ahora mismo para aplicar estos cambios?');
+        return;
+      }
+
       const btn = document.getElementById('btn-save-privacy');
       btn.disabled = true;
       btn.querySelector('span').textContent = 'Aplicando...';
@@ -478,11 +646,26 @@
         if (session) {
           state.sessions.unshift(session);
           renderRollbackHistory();
+          showModal({
+            title: 'Directivas Aplicadas con Éxito',
+            message: `Se aplicaron <strong>${state.selectedTweakIds.size} optimizaciones</strong> de forma segura.<br>Se generó una sesión transaccional firmada (Hash: <code>${session.integrity_hash.substring(0, 16)}...</code>). Puedes revertir estos cambios en 1-clic desde la pestaña de Rollback en cualquier momento.`,
+            type: 'info'
+          });
         }
 
         await loadData();
       } catch (err) {
-        alert('Error al aplicar cambios: ' + err);
+        console.error('Error applying tweaks:', err);
+        const errStr = String(err);
+        if (errStr.includes('0x80070005') || errStr.includes('Access is denied') || errStr.includes('Elevated Administrator') || errStr.includes('privileges required')) {
+          promptElevation('<strong>Permisos Insuficientes (Acceso Denegado 0x80070005):</strong><br>Windows impidió modificar los servicios o directivas seleccionadas porque Pristine no se está ejecutando como Administrador.<br><br>¿Deseas reiniciar Pristine con elevación UAC ahora?');
+        } else {
+          showModal({
+            title: 'Error al Aplicar Cambios',
+            message: 'Ocurrió un error al aplicar las directivas: ' + errStr,
+            type: 'error'
+          });
+        }
       } finally {
         btn.disabled = false;
         btn.querySelector('span').textContent = 'Aplicar Cambios';
@@ -579,17 +762,32 @@
         </button>
       `;
 
-      item.querySelector('.btn-revert').addEventListener('click', async () => {
-        if (confirm(`¿Revertir la sesión '${session.description}' al estado exacto previo?`)) {
-          try {
-            await invokeNative('revert_transaction', { session });
-            alert('Sesión revertida exitosamente.');
-            await loadTransactionHistory();
-            await loadData();
-          } catch (err) {
-            alert('Error al revertir sesión: ' + err);
+      item.querySelector('.btn-revert').addEventListener('click', () => {
+        showModal({
+          title: '¿Revertir Sesión Transaccional?',
+          message: `¿Deseas revertir la sesión '<strong>${session.description}</strong>' al estado exacto previo?<br><br>Todas las claves del registro, servicios y tareas programadas serán restaurados a sus valores originales con garantía criptográfica.`,
+          type: 'warning',
+          confirmText: 'Revertir Ahora',
+          cancelText: 'Cancelar',
+          onConfirm: async () => {
+            try {
+              await invokeNative('revert_transaction', { session });
+              showModal({
+                title: 'Sesión Revertida',
+                message: 'La sesión se revirtió exitosamente. Los valores previos han sido restaurados.',
+                type: 'info'
+              });
+              await loadTransactionHistory();
+              await loadData();
+            } catch (err) {
+              showModal({
+                title: 'Error en Reversión',
+                message: 'Error al revertir sesión: ' + err,
+                type: 'error'
+              });
+            }
           }
-        }
+        });
       });
 
       elRollbackList.appendChild(item);
@@ -597,19 +795,20 @@
   }
 
   // App Initialization
-  function initApp() {
+  async function initApp() {
     console.log('[PRISTINE] Initializing UI application...');
     setupNavigation();
     setupThemeHandlers();
     setupCategoryFilters();
     setupActions();
+    await updatePrivilegeState();
     loadData();
 
     // Start live metrics loop
     pollHardwareMetrics();
     setInterval(pollHardwareMetrics, 1500);
 
-    invokeNative('frontend_log', { msg: 'DOM, category filters, and handlers initialized successfully' }).catch(() => {});
+    invokeNative('frontend_log', { msg: 'DOM, category filters, privilege state and handlers initialized successfully' }).catch(() => {});
   }
 
   if (document.readyState === 'loading') {

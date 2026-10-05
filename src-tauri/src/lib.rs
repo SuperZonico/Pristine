@@ -26,6 +26,8 @@ pub fn run() {
             clean_safe_temporary_files,
             clean_winsxs_component_store,
             create_system_restore_point,
+            check_elevation,
+            request_elevation,
             frontend_log,
         ])
         .setup(|app| {

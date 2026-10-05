@@ -230,3 +230,39 @@ pub fn create_system_restore_point() -> OperationResult {
         }
     }
 }
+
+/// Checks whether the running process has elevated (Administrator) rights.
+#[tauri::command]
+pub fn check_elevation() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        pristine_winapi::security::is_process_elevated()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        true
+    }
+}
+
+/// Requests UAC elevation by relaunching the application via ShellExecuteW 'runas'.
+#[tauri::command]
+pub fn request_elevation() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        let launched = pristine_winapi::security::relaunch_elevated();
+        if launched {
+            // Exit the unelevated process after a brief moment to allow the elevated instance to start
+            std::thread::spawn(|| {
+                std::thread::sleep(std::time::Duration::from_millis(600));
+                std::process::exit(0);
+            });
+            true
+        } else {
+            false
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        true
+    }
+}

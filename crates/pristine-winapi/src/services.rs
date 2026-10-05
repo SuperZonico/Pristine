@@ -14,10 +14,10 @@ use windows::Win32::Foundation::ERROR_SERVICE_DOES_NOT_EXIST;
 use windows::Win32::System::Services::{
     ChangeServiceConfigW, CloseServiceHandle, ControlService, OpenSCManagerW, OpenServiceW,
     QueryServiceConfigW, QueryServiceStatusEx, ENUM_SERVICE_TYPE, QUERY_SERVICE_CONFIGW, SC_HANDLE,
-    SC_MANAGER_ALL_ACCESS, SC_MANAGER_CONNECT, SC_STATUS_PROCESS_INFO, SERVICE_AUTO_START,
-    SERVICE_CHANGE_CONFIG, SERVICE_CONTROL_STOP, SERVICE_DEMAND_START, SERVICE_DISABLED,
-    SERVICE_ERROR, SERVICE_NO_CHANGE, SERVICE_QUERY_CONFIG, SERVICE_QUERY_STATUS, SERVICE_RUNNING,
-    SERVICE_START_TYPE, SERVICE_STATUS, SERVICE_STATUS_PROCESS, SERVICE_STOP,
+    SC_MANAGER_CONNECT, SC_STATUS_PROCESS_INFO, SERVICE_AUTO_START, SERVICE_CHANGE_CONFIG,
+    SERVICE_CONTROL_STOP, SERVICE_DEMAND_START, SERVICE_DISABLED, SERVICE_ERROR, SERVICE_NO_CHANGE,
+    SERVICE_QUERY_CONFIG, SERVICE_QUERY_STATUS, SERVICE_RUNNING, SERVICE_START_TYPE,
+    SERVICE_STATUS, SERVICE_STATUS_PROCESS, SERVICE_STOP,
 };
 
 use crate::error::WinApiError;
@@ -148,11 +148,11 @@ pub fn configure_service(
         return Ok(None);
     }
 
-    let scm = unsafe { OpenSCManagerW(None, None, SC_MANAGER_ALL_ACCESS) }.map_err(|e| {
+    let scm = unsafe { OpenSCManagerW(None, None, SC_MANAGER_CONNECT) }.map_err(|e| {
         WinApiError::ServiceError {
             service: service_name.to_string(),
             code: e.code().0 as u32,
-            message: format!("Elevated SCM access required to configure services: {}", e),
+            message: format!("Failed to connect to Service Control Manager: {}", e),
         }
     })?;
     let _scm_guard = SafeScHandle::new(scm);
@@ -168,7 +168,10 @@ pub fn configure_service(
     .map_err(|e| WinApiError::ServiceError {
         service: service_name.to_string(),
         code: e.code().0 as u32,
-        message: format!("Failed to open service for configuration: {}", e),
+        message: format!(
+            "Elevated Administrator privileges required to configure service '{}': {}",
+            service_name, e
+        ),
     })?;
     let _svc_guard = SafeScHandle::new(service);
 
