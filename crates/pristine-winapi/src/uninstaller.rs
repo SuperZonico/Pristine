@@ -533,6 +533,7 @@ const GLOBAL_BLACKLIST_TOKENS: &[&str] = &[
     "realtek",
     "google",
     "apple",
+    "adobe",
     "mozilla",
     "oracle",
     "appdata",
@@ -546,6 +547,57 @@ const GLOBAL_BLACKLIST_TOKENS: &[&str] = &[
     "windows nt",
     "clients",
     "oem",
+    "computer",
+    "com",
+    "net",
+    "org",
+    "io",
+    "app",
+    "apps",
+    "co",
+    "web",
+    "pwa",
+    "online",
+    "portal",
+    "client",
+    "launcher",
+    "service",
+    "services",
+    "player",
+    "viewer",
+    "suite",
+    "manager",
+    "assistant",
+    "helper",
+    "connect",
+    "support",
+    "center",
+    "central",
+    "tool",
+    "tools",
+    "util",
+    "utility",
+    "utilities",
+    "main",
+    "core",
+    "data",
+    "live",
+    "hub",
+    "host",
+    "cloud",
+    "link",
+    "share",
+    "sync",
+    "store",
+    "media",
+    "welcome",
+    "compact",
+    "compaction",
+    "game",
+    "games",
+    "official",
+    "package",
+    "packages",
 ];
 
 fn get_dir_size_recursive(path: &std::path::Path, depth: usize) -> u64 {
@@ -570,43 +622,27 @@ fn get_dir_size_recursive(path: &std::path::Path, depth: usize) -> u64 {
 /// Extrae palabras clave significativas del nombre de la aplicación para buscar residuos de manera quirúrgica y segura.
 pub fn extract_search_tokens(app_name: &str) -> Vec<String> {
     let mut tokens = Vec::new();
-    let clean = app_name
-        .replace(
-            ['(', ')', '[', ']', '-', '_', '.', ':', ',', '/', '\\', '+'],
-            " ",
-        )
-        .to_lowercase();
+
+    // Limpieza preliminar: remover extensiones TLD y ejecutables de wrappers web
+    let mut clean_name = app_name.trim().to_lowercase();
+    for tld in [".com", ".net", ".org", ".io", ".app", ".co", ".exe", ".msi"] {
+        if clean_name.ends_with(tld) {
+            clean_name = clean_name[..clean_name.len() - tld.len()].to_string();
+            break;
+        }
+    }
+
+    let clean = clean_name.replace(
+        [
+            '(', ')', '[', ']', '-', '_', '.', ':', ',', '/', '\\', '+', '@',
+        ],
+        " ",
+    );
 
     for word in clean.split_whitespace() {
         let w = word.trim();
-        if w.len() >= 3
+        if w.len() >= 4
             && !w.chars().all(|c| c.is_ascii_digit())
-            && ![
-                "x64",
-                "x86",
-                "64bit",
-                "32bit",
-                "bit",
-                "edition",
-                "version",
-                "release",
-                "setup",
-                "installer",
-                "update",
-                "pack",
-                "redistributable",
-                "corporation",
-                "inc",
-                "llc",
-                "the",
-                "for",
-                "and",
-                "app",
-                "pro",
-                "free",
-                "community",
-            ]
-            .contains(&w)
             && !GLOBAL_BLACKLIST_TOKENS.contains(&w)
             && !tokens.contains(&w.to_string())
         {
@@ -614,7 +650,52 @@ pub fn extract_search_tokens(app_name: &str) -> Vec<String> {
         }
     }
 
+    // Si no hay tokens >= 4 caracteres, admitir token de 3 caracteres solo si no es genérico
+    if tokens.is_empty() {
+        for word in clean.split_whitespace() {
+            let w = word.trim();
+            if w.len() == 3
+                && !w.chars().all(|c| c.is_ascii_digit())
+                && !GLOBAL_BLACKLIST_TOKENS.contains(&w)
+                && !tokens.contains(&w.to_string())
+            {
+                tokens.push(w.to_string());
+            }
+        }
+    }
+
     tokens
+}
+
+/// Verifica si un nombre de carpeta o clave de registro coincide de forma estricta por palabra completa con los tokens de la app.
+pub fn name_matches_tokens(candidate_name: &str, tokens: &[String]) -> bool {
+    let cand_lower = candidate_name.trim().to_lowercase();
+
+    // 1. Guardas de lista negra estricta
+    if GLOBAL_BLACKLIST_TOKENS.iter().any(|&b| cand_lower == *b) {
+        return false;
+    }
+
+    // 2. Extraer palabras completas del candidato delimitadas por caracteres no alfanuméricos
+    let candidate_words: Vec<&str> = cand_lower
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    for token in tokens {
+        // Coincidencia exacta con el nombre de la carpeta (ej. "TikTok" == "tiktok")
+        if cand_lower == *token {
+            return true;
+        }
+
+        // Coincidencia de palabra completa (ej. "TikTok Desktop" contiene "tiktok" como palabra independiente)
+        // NUNCA coincidencia parcial arbitraria tipo contains()!
+        if candidate_words.contains(&token.as_str()) {
+            return true;
+        }
+    }
+
+    false
 }
 
 /// Escanea exhaustivamente en busca de carpetas y claves de registro residuales que quedaron huérfanas tras la desinstalación.
@@ -638,8 +719,10 @@ pub fn scan_app_residuals(app_name: &str, _publisher: &str) -> ResidualScanResul
         candidate_roots.push(std::path::PathBuf::from(appdata));
     }
     if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
-        candidate_roots.push(std::path::PathBuf::from(&localappdata));
-        candidate_roots.push(std::path::PathBuf::from(&localappdata).join("Programs"));
+        let p = std::path::PathBuf::from(&localappdata);
+        candidate_roots.push(p.clone());
+        candidate_roots.push(p.join("Programs"));
+        candidate_roots.push(p.join("Packages")); // Datos de paquetes UWP
     }
     if let Ok(programdata) = std::env::var("ProgramData") {
         candidate_roots.push(std::path::PathBuf::from(programdata));
@@ -666,20 +749,7 @@ pub fn scan_app_residuals(app_name: &str, _publisher: &str) -> ResidualScanResul
                 }
 
                 if let Some(folder_name) = path.file_name().and_then(|n| n.to_str()) {
-                    let folder_lower = folder_name.to_lowercase();
-
-                    if GLOBAL_BLACKLIST_TOKENS.iter().any(|&b| folder_lower == *b) {
-                        continue;
-                    }
-
-                    // Debe coincidir con al menos un token
-                    let matches = tokens.iter().any(|token| {
-                        folder_lower == *token
-                            || (folder_lower.contains(token)
-                                && folder_lower.len() <= token.len() + 20)
-                    });
-
-                    if matches {
+                    if name_matches_tokens(folder_name, &tokens) {
                         let path_str = path.to_string_lossy().to_string();
                         if !seen_paths.contains(&path_str) {
                             seen_paths.insert(path_str.clone());
@@ -739,28 +809,18 @@ pub fn scan_app_residuals(app_name: &str, _publisher: &str) -> ResidualScanResul
 
                 if enum_res == ERROR_SUCCESS {
                     let sub_name = from_wide(&name_buf[..name_len as usize]);
-                    let sub_lower = sub_name.to_lowercase();
-
-                    if !GLOBAL_BLACKLIST_TOKENS.iter().any(|&b| sub_lower == *b) {
-                        let matches = tokens.iter().any(|token| {
-                            sub_lower == *token
-                                || (sub_lower.contains(token)
-                                    && sub_lower.len() <= token.len() + 20)
-                        });
-
-                        if matches {
-                            let reg_path = format!(r"{}\{}\{}", prefix, subkey, sub_name);
-                            if !seen_paths.contains(&reg_path) {
-                                seen_paths.insert(reg_path.clone());
-                                residuals.push(ResidualItem {
-                                    id: format!("reg_{}", residuals.len()),
-                                    item_type: "registry".to_string(),
-                                    path: reg_path,
-                                    description: "Clave de registro residual de configuración"
-                                        .to_string(),
-                                    size_bytes: 1024,
-                                });
-                            }
+                    if name_matches_tokens(&sub_name, &tokens) {
+                        let reg_path = format!(r"{}\{}\{}", prefix, subkey, sub_name);
+                        if !seen_paths.contains(&reg_path) {
+                            seen_paths.insert(reg_path.clone());
+                            residuals.push(ResidualItem {
+                                id: format!("reg_{}", residuals.len()),
+                                item_type: "registry".to_string(),
+                                path: reg_path,
+                                description: "Clave de registro residual de configuración"
+                                    .to_string(),
+                                size_bytes: 1024,
+                            });
                         }
                     }
                 }
@@ -854,7 +914,10 @@ mod tests {
         let tokens = extract_search_tokens("Spotify Music Player (x64) v1.2.3");
         assert!(tokens.contains(&"spotify".to_string()));
         assert!(tokens.contains(&"music".to_string()));
-        assert!(tokens.contains(&"player".to_string()));
+        assert!(
+            !tokens.contains(&"player".to_string()),
+            "Generic word player must be blacklisted"
+        );
         assert!(!tokens.contains(&"x64".to_string()));
         assert!(!tokens.contains(&"v1".to_string()));
     }
@@ -875,5 +938,32 @@ mod tests {
             res.residuals.is_empty(),
             "Should not return residuals for core OS keywords"
         );
+    }
+
+    #[test]
+    fn test_scan_tiktok_no_false_positives() {
+        let res = scan_app_residuals("TikTok.com", "");
+        assert_eq!(
+            res.residuals.len(),
+            0,
+            "TikTok.com should not match Apple Computer, com.*, or other random directories"
+        );
+    }
+
+    #[test]
+    fn test_name_matches_tokens_strict() {
+        let tokens = vec!["tiktok".to_string()];
+
+        // Must match exact or whole-word
+        assert!(name_matches_tokens("TikTok", &tokens));
+        assert!(name_matches_tokens("TikTok Desktop", &tokens));
+        assert!(name_matches_tokens("ByteDance.TikTok_12345", &tokens));
+
+        // Must NEVER match unrelated words with 'com' or partial substrings
+        assert!(!name_matches_tokens("Apple Computer", &tokens));
+        assert!(!name_matches_tokens("com.adobe.dunamis", &tokens));
+        assert!(!name_matches_tokens("com.funplus", &tokens));
+        assert!(!name_matches_tokens("Common Files", &tokens));
+        assert!(!name_matches_tokens("DaVinci Resolve Welcome", &tokens));
     }
 }
